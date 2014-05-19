@@ -22,6 +22,8 @@
 #include <zp50_items>
 #define LIBRARY_ADMIN_MENU "zp50_admin_menu"
 #include <zp50_admin_menu>
+#define LIBRARY_RANDOMSPAWN "zp50_random_spawn"
+#include <zp50_random_spawn>
 #include <zp50_colorchat>
 
 #define TASK_WELCOMEMSG 100
@@ -40,6 +42,7 @@ const KEYSMENU = MENU_KEY_1|MENU_KEY_2|MENU_KEY_3|MENU_KEY_4|MENU_KEY_5|MENU_KEY
 new g_ChooseTeamOverrideActive
 
 new cvar_buy_custom_primary, cvar_buy_custom_secondary, cvar_buy_custom_grenades
+new cvar_random_spawning
 
 public plugin_init()
 {
@@ -63,7 +66,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_BUYMENUS) || equal(module, LIBRARY_ZOMBIECLASSES) || equal(module, LIBRARY_HUMANCLASSES) || equal(module, LIBRARY_ITEMS) || equal(module, LIBRARY_ADMIN_MENU))
+	if (equal(module, LIBRARY_BUYMENUS) || equal(module, LIBRARY_ZOMBIECLASSES) || equal(module, LIBRARY_HUMANCLASSES) || equal(module, LIBRARY_ITEMS) || equal(module, LIBRARY_ADMIN_MENU) || equal(module, LIBRARY_RANDOMSPAWN))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -81,6 +84,7 @@ public plugin_cfg()
 	cvar_buy_custom_primary = get_cvar_pointer("zp_buy_custom_primary")
 	cvar_buy_custom_secondary = get_cvar_pointer("zp_buy_custom_secondary")
 	cvar_buy_custom_grenades = get_cvar_pointer("zp_buy_custom_grenades")
+	cvar_random_spawning = get_cvar_pointer("zp_random_spawning_csdm")
 }
 
 // Event Round Start
@@ -154,8 +158,14 @@ show_menu_main(id)
 	else
 		len += formatex(menu[len], charsmax(menu) - len, "\d4. %L^n", id, "MENU_HCLASS")
 	
-	// 5. Help
-	len += formatex(menu[len], charsmax(menu) - len, "\r5.\w %L^n^n", id, "MENU_INFO")
+	// 5. Unstuck
+	if (LibraryExists(LIBRARY_RANDOMSPAWN, LibType_Library) && is_user_alive(id))
+		len += formatex(menu[len], charsmax(menu) - len, "\r5.\w %L^n", id, "MENU_UNSTUCK")
+	else
+		len += formatex(menu[len], charsmax(menu) - len, "\d5. %L^n", id, "MENU_UNSTUCK")
+	
+	// 6. Help
+	len += formatex(menu[len], charsmax(menu) - len, "\r6.\w %L^n^n", id, "MENU_INFO")
 	
 	// 7. Choose Team
 	len += formatex(menu[len], charsmax(menu) - len, "\r7.\w %L^n^n", id, "MENU_CHOOSE_TEAM")
@@ -226,7 +236,26 @@ public menu_main(id, key)
 			else
 				zp_colored_print(id, "%L", id, "CMD_NOT_HCLASSES")
 		}
-		case 4: // Help Menu
+		case 4:
+		{
+			// Check if player is stuck
+			if (LibraryExists(LIBRARY_RANDOMSPAWN, LibType_Library) && is_user_alive(id))
+			{
+				if (is_player_stuck(id))
+				{
+					// Move to an initial spawn
+					if (get_pcvar_num(cvar_random_spawning))
+						zp_random_spawn_do(id, true) // random spawn (including CSDM)
+					else
+						zp_random_spawn_do(id, false) // regular spawn
+				}
+				else
+					zp_colored_print(id, "%L", id, "CMD_NOT_STUCK")
+			}
+			else
+				zp_colored_print(id, "%L", id, "CMD_NOT")
+		}
+		case 5: // Help Menu
 		{
 			show_help(id)
 		}
@@ -257,4 +286,18 @@ show_help(id)
 	len += formatex(motd[len], charsmax(motd) - len, "%L", id, "MOTD_INFO12")
 	
 	show_motd(id, motd)
+}
+
+// Check if a player is stuck (credits to VEN)
+stock is_player_stuck(id)
+{
+	static Float:originF[3]
+	pev(id, pev_origin, originF)
+	
+	engfunc(EngFunc_TraceHull, originF, originF, 0, (pev(id, pev_flags) & FL_DUCKING) ? HULL_HEAD : HULL_HUMAN, id, 0)
+	
+	if (get_tr2(0, TR_StartSolid) || get_tr2(0, TR_AllSolid) || !get_tr2(0, TR_InOpen))
+		return true;
+	
+	return false;
 }

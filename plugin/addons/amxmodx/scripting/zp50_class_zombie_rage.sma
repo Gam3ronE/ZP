@@ -85,3 +85,10 @@ public zp_fw_core_cure(id, attacker)
 	if (zp_class_zombie_get_current(id) == g_ZombieClassID)
 		set_user_rendering(id)
 }
+
+public client_disconnect(id)
+{
+	// Player was using zombie class with custom rendering, restore it to normal
+	if (zp_class_zombie_get_current(id) == g_ZombieClassID)
+		set_user_rendering(id)
+}

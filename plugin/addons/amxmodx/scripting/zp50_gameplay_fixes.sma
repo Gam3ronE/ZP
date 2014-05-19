@@ -46,6 +46,7 @@ const OFFSET_CSMENUCODE = 205
 new g_MaxPlayers
 new g_fwSpawn
 new g_GameModeStarted
+new g_RoundEnded
 
 new cvar_remove_doors
 new cvar_block_pushables
@@ -161,6 +162,8 @@ public clcmd_changeteam(id)
 // Event Round Start
 public event_round_start()
 {
+	g_RoundEnded = false
+	
 	// Remove doors?
 	if (get_pcvar_num(cvar_remove_doors) > 0)
 		set_task(0.1, "remove_doors")
@@ -230,8 +233,8 @@ public fw_PlayerSpawn_Post(id)
 // Respawn Player Check Task (if killed by worldspawn)
 public respawn_player_check_task(taskid)
 {
-	// Successfully spawned
-	if (is_user_alive(ID_RESPAWN))
+	// Successfully spawned or round ended
+	if (is_user_alive(ID_RESPAWN) || g_RoundEnded)
 		return;
 	
 	// Get player's team
@@ -366,6 +369,7 @@ public zp_fw_gamemodes_start()
 public zp_fw_gamemodes_end()
 {
 	g_GameModeStarted = false
+	g_RoundEnded = true
 	
 	// Stop respawning after game mode ends
 	new id

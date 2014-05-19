@@ -43,13 +43,13 @@ public plugin_precache()
 		if (ArraySize(ambience_sounds) > 0)
 		{
 			// Precache ambience sounds
-			new sound_index, sound[64], sound_path[96]
+			new sound_index, sound[128]
 			for (sound_index = 0; sound_index < ArraySize(ambience_sounds); sound_index++)
 			{
 				ArrayGetString(ambience_sounds, sound_index, sound, charsmax(sound))
 				if (equal(sound[strlen(sound)-4], ".mp3"))
 				{
-					formatex(sound_path, charsmax(sound_path), "sound/%s", sound)
+					format(sound, charsmax(sound), "sound/%s", sound)
 					precache_generic(sound)
 				}
 				else

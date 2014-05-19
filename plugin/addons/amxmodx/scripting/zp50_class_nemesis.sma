@@ -19,6 +19,10 @@
 #include <cs_weap_models_api>
 #include <cs_ham_bots_api>
 #include <zp50_core>
+#define LIBRARY_GRENADE_FROST "zp50_grenade_frost"
+#include <zp50_grenade_frost>
+#define LIBRARY_GRENADE_FIRE "zp50_grenade_fire"
+#include <zp50_grenade_fire>
 
 // Settings file
 new const ZP_SETTINGS_FILE[] = "zombieplague.ini"
@@ -49,6 +53,7 @@ new cvar_nemesis_health, cvar_nemesis_base_health, cvar_nemesis_speed, cvar_neme
 new cvar_nemesis_glow
 new cvar_nemesis_aura, cvar_nemesis_aura_color_R, cvar_nemesis_aura_color_G, cvar_nemesis_aura_color_B
 new cvar_nemesis_damage, cvar_nemesis_kill_explode
+new cvar_nemesis_grenade_frost, cvar_nemesis_grenade_fire
 
 public plugin_init()
 {
@@ -58,6 +63,7 @@ public plugin_init()
 	RegisterHamBots(Ham_TakeDamage, "fw_TakeDamage")
 	RegisterHam(Ham_Killed, "player", "fw_PlayerKilled")
 	RegisterHamBots(Ham_Killed, "fw_PlayerKilled")
+	register_forward(FM_ClientDisconnect, "fw_ClientDisconnect_Post", 1)
 	
 	g_MaxPlayers = get_maxplayers()
 	
@@ -72,6 +78,8 @@ public plugin_init()
 	cvar_nemesis_aura_color_B = register_cvar("zp_nemesis_aura_color_B", "0")
 	cvar_nemesis_damage = register_cvar("zp_nemesis_damage", "2.0")
 	cvar_nemesis_kill_explode = register_cvar("zp_nemesis_kill_explode", "1")
+	cvar_nemesis_grenade_frost = register_cvar("zp_nemesis_grenade_frost", "0")
+	cvar_nemesis_grenade_fire = register_cvar("zp_nemesis_grenade_fire", "1")
 }
 
 public plugin_precache()
@@ -127,12 +135,43 @@ public plugin_natives()
 	register_native("zp_class_nemesis_get", "native_class_nemesis_get")
 	register_native("zp_class_nemesis_set", "native_class_nemesis_set")
 	register_native("zp_class_nemesis_get_count", "native_class_nemesis_get_count")
+	
+	set_module_filter("module_filter")
+	set_native_filter("native_filter")
+}
+public module_filter(const module[])
+{
+	if (equal(module, LIBRARY_GRENADE_FROST) || equal(module, LIBRARY_GRENADE_FIRE))
+		return PLUGIN_HANDLED;
+	
+	return PLUGIN_CONTINUE;
+}
+public native_filter(const name[], index, trap)
+{
+	if (!trap)
+		return PLUGIN_HANDLED;
+		
+	return PLUGIN_CONTINUE;
 }
 
 public client_disconnect(id)
 {
+	if (flag_get(g_IsNemesis, id))
+	{
+		// Remove nemesis glow
+		if (get_pcvar_num(cvar_nemesis_glow))
+			set_user_rendering(id)
+		
+		// Remove nemesis aura
+		if (get_pcvar_num(cvar_nemesis_aura))
+			remove_task(id+TASK_AURA)
+	}
+}
+
+public fw_ClientDisconnect_Post(id)
+{
+	// Reset flags AFTER disconnect (to allow checking if the player was nemesis before disconnecting)
 	flag_unset(g_IsNemesis, id)
-	remove_task(id+TASK_AURA)
 }
 
 // Ham Take Damage Forward
@@ -173,6 +212,23 @@ public fw_PlayerKilled(victim, attacker, shouldgib)
 	}
 }
 
+public zp_fw_grenade_frost_pre(id)
+{
+	// Prevent frost for Nemesis
+	if (flag_get(g_IsNemesis, id) && !get_pcvar_num(cvar_nemesis_grenade_frost))
+		return PLUGIN_HANDLED;
+	
+	return PLUGIN_CONTINUE;
+}
+
+public zp_fw_grenade_fire_pre(id)
+{
+	// Prevent burning for Nemesis
+	if (flag_get(g_IsNemesis, id) && !get_pcvar_num(cvar_nemesis_grenade_fire))
+		return PLUGIN_HANDLED;
+	
+	return PLUGIN_CONTINUE;
+}
 
 public zp_fw_core_spawn_post(id)
 {

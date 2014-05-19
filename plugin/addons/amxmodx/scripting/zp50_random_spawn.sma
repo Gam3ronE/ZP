@@ -38,27 +38,43 @@ public plugin_init()
 {
 	register_plugin("[ZP] Random Spawning", ZP_VERSION_STRING, "ZP Dev Team")
 	
-	RegisterHam(Ham_Spawn, "player", "fw_PlayerSpawn_Post", 1)
-	RegisterHamBots(Ham_Spawn, "fw_PlayerSpawn_Post", 1)
-	
 	cvar_random_spawning = register_cvar("zp_random_spawning_csdm", "1") // 1-use CSDM spawns // 0-use regular spawns
 	
 	// Collect random spawn points
 	load_spawns()
 }
 
-// Ham Player Spawn Post Forward
-public fw_PlayerSpawn_Post(id)
+
+public plugin_natives()
 {
-	// Not alive or didn't join a team yet
-	if (!is_user_alive(id) || !cs_get_user_team(id))
-		return;
+	register_library("zp50_random_spawn")
+	register_native("zp_random_spawn_do", "native_random_spawn_do")
+}
+
+public native_random_spawn_do(plugin_id, num_params)
+{
+	new id = get_param(1)
 	
+	if (!is_user_alive(id))
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", id)
+		return false;
+	}
+	
+	new csdmspawns = get_param(2)
+	
+	do_random_spawn(id, csdmspawns)
+	return true;
+}
+
+// ZP Player Spawn Post Forward
+public zp_fw_core_spawn_post(id)
+{
 	do_random_spawn(id, get_pcvar_num(cvar_random_spawning))
 }
 
 // Place user at a random spawn
-do_random_spawn(id, csdmspawns = 1)
+do_random_spawn(id, csdmspawns = true)
 {
 	new hull, spawn_index, current_index
 	

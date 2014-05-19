@@ -17,8 +17,6 @@
 #include <cs_weap_models_api>
 #include <cs_ham_bots_api>
 #include <zp50_core>
-#define LIBRARY_NEMESIS "zp50_class_nemesis"
-#include <zp50_class_nemesis>
 
 // Settings file
 new const ZP_SETTINGS_FILE[] = "zombieplague.ini"
@@ -76,7 +74,8 @@ const FFADE_STAYOUT = 0x0004
 // Custom Forwards
 enum _:TOTAL_FORWARDS
 {
-	FW_USER_UNFROZEN = 0
+	FW_USER_FREEZE_PRE = 0,
+	FW_USER_UNFROZEN
 }
 new g_Forwards[TOTAL_FORWARDS]
 new g_ForwardResult
@@ -91,7 +90,7 @@ new Float:g_FrozenRenderingAmount[MAXPLAYERS+1]
 new g_MsgDamage, g_MsgScreenFade
 new g_trailSpr, g_exploSpr, g_glassSpr
 
-new cvar_grenade_frost_duration, cvar_grenade_frost_hudicon, cvar_grenade_frost_nemesis
+new cvar_grenade_frost_duration, cvar_grenade_frost_hudicon
 
 public plugin_init()
 {
@@ -115,31 +114,56 @@ public plugin_init()
 	cvar_grenade_frost_duration = register_cvar("zp_grenade_frost_duration", "3")
 	cvar_grenade_frost_hudicon = register_cvar("zp_grenade_frost_hudicon", "1")
 	
-	// Nemesis Class loaded?
-	if (LibraryExists(LIBRARY_NEMESIS, LibType_Library))
-		cvar_grenade_frost_nemesis = register_cvar("zp_grenade_frost_nemesis", "0")
-	
+	g_Forwards[FW_USER_FREEZE_PRE] = CreateMultiForward("zp_fw_grenade_frost_pre", ET_CONTINUE, FP_CELL)
 	g_Forwards[FW_USER_UNFROZEN] = CreateMultiForward("zp_fw_grenade_frost_unfreeze", ET_IGNORE, FP_CELL)
 }
 
 public plugin_natives()
 {
-	set_module_filter("module_filter")
-	set_native_filter("native_filter")
+	register_library("zp50_grenade_frost")
+	register_native("zp_grenade_frost_get", "native_grenade_frost_get")
+	register_native("zp_grenade_frost_set", "native_grenade_frost_set")
 }
-public module_filter(const module[])
+
+public native_grenade_frost_get(plugin_id, num_params)
 {
-	if (equal(module, LIBRARY_NEMESIS))
-		return PLUGIN_HANDLED;
+	new id = get_param(1)
 	
-	return PLUGIN_CONTINUE;
+	if (!is_user_alive(id))
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", id)
+		return false;
+	}
+	
+	return flag_get_boolean(g_IsFrozen, id);
 }
-public native_filter(const name[], index, trap)
+
+public native_grenade_frost_set(plugin_id, num_params)
 {
-	if (!trap)
-		return PLUGIN_HANDLED;
+	new id = get_param(1)
+	
+	if (!is_user_alive(id))
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", id)
+		return false;
+	}
+	
+	new set = get_param(2)
+	
+	// Unfreeze
+	if (!set)
+	{
+		// Not frozen
+		if (!flag_get(g_IsFrozen, id))
+			return true;
 		
-	return PLUGIN_CONTINUE;
+		// Remove freeze right away and stop the task
+		remove_freeze(id+TASK_FROST_REMOVE)
+		remove_task(id+TASK_FROST_REMOVE)
+		return true;
+	}
+	
+	return set_freeze(id);
 }
 
 public plugin_precache()
@@ -411,91 +435,102 @@ frost_explode(ent)
 	
 	while ((victim = engfunc(EngFunc_FindEntityInSphere, victim, origin, NADE_EXPLOSION_RADIUS)) != 0)
 	{
-		// Only effect alive unfrozen zombies
-		if (!is_user_alive(victim) || !zp_core_is_zombie(victim) || flag_get(g_IsFrozen, victim))
+		// Only effect alive zombies
+		if (!is_user_alive(victim) || !zp_core_is_zombie(victim))
 			continue;
 		
-		// Nemesis shouldn't be frozen
-		if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(victim) && !get_pcvar_num(cvar_grenade_frost_nemesis))
-		{
-			// Get player's origin
-			static origin2[3]
-			get_user_origin(victim, origin2)
-			
-			// Broken glass sound
-			static sound[SOUND_MAX_LENGTH]
-			ArrayGetString(g_sound_grenade_frost_break, random_num(0, ArraySize(g_sound_grenade_frost_break) - 1), sound, charsmax(sound))
-			emit_sound(victim, CHAN_BODY, sound, 1.0, ATTN_NORM, 0, PITCH_NORM)
-			
-			// Glass shatter
-			message_begin(MSG_PVS, SVC_TEMPENTITY, origin2)
-			write_byte(TE_BREAKMODEL) // TE id
-			write_coord(origin2[0]) // x
-			write_coord(origin2[1]) // y
-			write_coord(origin2[2]+24) // z
-			write_coord(16) // size x
-			write_coord(16) // size y
-			write_coord(16) // size z
-			write_coord(random_num(-50, 50)) // velocity x
-			write_coord(random_num(-50, 50)) // velocity y
-			write_coord(25) // velocity z
-			write_byte(10) // random velocity
-			write_short(g_glassSpr) // model
-			write_byte(10) // count
-			write_byte(25) // life
-			write_byte(BREAK_GLASS) // flags
-			message_end()
-			
-			continue;
-		}
-		
-		// Freeze icon?
-		if (get_pcvar_num(cvar_grenade_frost_hudicon))
-		{
-			message_begin(MSG_ONE_UNRELIABLE, g_MsgDamage, _, victim)
-			write_byte(0) // damage save
-			write_byte(0) // damage take
-			write_long(DMG_DROWN) // damage type - DMG_FREEZE
-			write_coord(0) // x
-			write_coord(0) // y
-			write_coord(0) // z
-			message_end()
-		}
-		
-		// Set frozen flag
-		flag_set(g_IsFrozen, victim)
-		
-		// Freeze sound
-		static sound[SOUND_MAX_LENGTH]
-		ArrayGetString(g_sound_grenade_frost_player, random_num(0, ArraySize(g_sound_grenade_frost_player) - 1), sound, charsmax(sound))
-		emit_sound(victim, CHAN_BODY, sound, 1.0, ATTN_NORM, 0, PITCH_NORM)
-		
-		// Add a blue tint to their screen
-		message_begin(MSG_ONE, g_MsgScreenFade, _, victim)
-		write_short(0) // duration
-		write_short(0) // hold time
-		write_short(FFADE_STAYOUT) // fade type
-		write_byte(0) // red
-		write_byte(50) // green
-		write_byte(200) // blue
-		write_byte(100) // alpha
-		message_end()
-		
-		// Update player entity rendering
-		ApplyFrozenRendering(victim)
-		
-		// Block gravity
-		ApplyFrozenGravity(victim)
-		
-		// Update player's maxspeed
-		ExecuteHamB(Ham_Player_ResetMaxSpeed, victim)
-		
-		// Set a task to remove the freeze
-		set_task(get_pcvar_float(cvar_grenade_frost_duration), "remove_freeze", victim+TASK_FROST_REMOVE)
+		set_freeze(victim)
 	}
 	
 	// Get rid of the grenade
 	engfunc(EngFunc_RemoveEntity, ent)
+}
+
+set_freeze(victim)
+{
+	// Already frozen
+	if (flag_get(g_IsFrozen, victim))
+		return false;
+	
+	// Allow other plugins to decide whether player should be frozen or not
+	ExecuteForward(g_Forwards[FW_USER_FREEZE_PRE], g_ForwardResult, victim)
+	if (g_ForwardResult >= PLUGIN_HANDLED)
+	{
+		// Get player's origin
+		static origin2[3]
+		get_user_origin(victim, origin2)
+		
+		// Broken glass sound
+		static sound[SOUND_MAX_LENGTH]
+		ArrayGetString(g_sound_grenade_frost_break, random_num(0, ArraySize(g_sound_grenade_frost_break) - 1), sound, charsmax(sound))
+		emit_sound(victim, CHAN_BODY, sound, 1.0, ATTN_NORM, 0, PITCH_NORM)
+		
+		// Glass shatter
+		message_begin(MSG_PVS, SVC_TEMPENTITY, origin2)
+		write_byte(TE_BREAKMODEL) // TE id
+		write_coord(origin2[0]) // x
+		write_coord(origin2[1]) // y
+		write_coord(origin2[2]+24) // z
+		write_coord(16) // size x
+		write_coord(16) // size y
+		write_coord(16) // size z
+		write_coord(random_num(-50, 50)) // velocity x
+		write_coord(random_num(-50, 50)) // velocity y
+		write_coord(25) // velocity z
+		write_byte(10) // random velocity
+		write_short(g_glassSpr) // model
+		write_byte(10) // count
+		write_byte(25) // life
+		write_byte(BREAK_GLASS) // flags
+		message_end()
+		
+		return false;
+	}
+	
+	// Freeze icon?
+	if (get_pcvar_num(cvar_grenade_frost_hudicon))
+	{
+		message_begin(MSG_ONE_UNRELIABLE, g_MsgDamage, _, victim)
+		write_byte(0) // damage save
+		write_byte(0) // damage take
+		write_long(DMG_DROWN) // damage type - DMG_FREEZE
+		write_coord(0) // x
+		write_coord(0) // y
+		write_coord(0) // z
+		message_end()
+	}
+	
+	// Set frozen flag
+	flag_set(g_IsFrozen, victim)
+	
+	// Freeze sound
+	static sound[SOUND_MAX_LENGTH]
+	ArrayGetString(g_sound_grenade_frost_player, random_num(0, ArraySize(g_sound_grenade_frost_player) - 1), sound, charsmax(sound))
+	emit_sound(victim, CHAN_BODY, sound, 1.0, ATTN_NORM, 0, PITCH_NORM)
+	
+	// Add a blue tint to their screen
+	message_begin(MSG_ONE, g_MsgScreenFade, _, victim)
+	write_short(0) // duration
+	write_short(0) // hold time
+	write_short(FFADE_STAYOUT) // fade type
+	write_byte(0) // red
+	write_byte(50) // green
+	write_byte(200) // blue
+	write_byte(100) // alpha
+	message_end()
+	
+	// Update player entity rendering
+	ApplyFrozenRendering(victim)
+	
+	// Block gravity
+	ApplyFrozenGravity(victim)
+	
+	// Update player's maxspeed
+	ExecuteHamB(Ham_Player_ResetMaxSpeed, victim)
+	
+	// Set a task to remove the freeze
+	set_task(get_pcvar_float(cvar_grenade_frost_duration), "remove_freeze", victim+TASK_FROST_REMOVE)
+	return true;
 }
 
 ApplyFrozenGravity(id)

@@ -429,8 +429,8 @@ show_menu_buy_grenades(id)
 // Buy Menu Primary
 public menu_buy_primary(id, key)
 {
-	// Player dead or zombie
-	if (!is_user_alive(id) || zp_core_is_zombie(id))
+	// Player dead or zombie or already bought primary
+	if (!is_user_alive(id) || zp_core_is_zombie(id) || !flag_get(g_CanBuyPrimary, id))
 		return PLUGIN_HANDLED;
 	
 	// Special keys / weapon list exceeded
@@ -494,8 +494,8 @@ buy_primary_weapon(id, selection)
 // Buy Menu Secondary
 public menu_buy_secondary(id, key)
 {
-	// Player dead?
-	if (!is_user_alive(id) || zp_core_is_zombie(id))
+	// Player dead or zombie or already bought secondary
+	if (!is_user_alive(id) || zp_core_is_zombie(id) || !flag_get(g_CanBuySecondary, id))
 		return PLUGIN_HANDLED;
 	
 	// Special keys / weapon list exceeded
@@ -546,8 +546,8 @@ buy_secondary_weapon(id, selection)
 // Buy Menu Grenades
 public menu_buy_grenades(id, key)
 {
-	// Player dead?
-	if (!is_user_alive(id) || zp_core_is_zombie(id))
+	// Player dead or zombie or already bought grenades
+	if (!is_user_alive(id) || zp_core_is_zombie(id) || !flag_get(g_CanBuyGrenades, id))
 		return PLUGIN_HANDLED;
 	
 	// Special keys / weapon list exceeded

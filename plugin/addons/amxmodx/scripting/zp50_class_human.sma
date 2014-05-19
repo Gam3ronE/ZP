@@ -24,6 +24,14 @@
 // Human Classes file
 new const ZP_HUMANCLASSES_FILE[] = "zp_humanclasses.ini"
 
+// Settings file
+new const ZP_SETTINGS_FILE[] = "zombieplague.ini"
+
+#define MODEL_MAX_LENGTH 64
+
+// Models
+new g_model_vknife_human[MODEL_MAX_LENGTH] = "models/v_knife.mdl"
+
 #define MAXPLAYERS 32
 
 #define HUMANS_DEFAULT_NAME "Human"
@@ -41,7 +49,8 @@ new g_menu_data[MAXPLAYERS+1]
 
 enum _:TOTAL_FORWARDS
 {
-	FW_CLASS_SELECT_PRE = 0
+	FW_CLASS_SELECT_PRE = 0,
+	FW_CLASS_SELECT_POST
 }
 new g_Forwards[TOTAL_FORWARDS]
 new g_ForwardResult
@@ -67,6 +76,7 @@ public plugin_init()
 	register_clcmd("say /class", "show_class_menu")
 	
 	g_Forwards[FW_CLASS_SELECT_PRE] = CreateMultiForward("zp_fw_class_human_select_pre", ET_CONTINUE, FP_CELL, FP_CELL)
+	g_Forwards[FW_CLASS_SELECT_POST] = CreateMultiForward("zp_fw_class_human_select_post", ET_CONTINUE, FP_CELL, FP_CELL)
 }
 
 public plugin_cfg()
@@ -86,12 +96,23 @@ public plugin_cfg()
 	}
 }
 
+public plugin_precache()
+{
+	// Load from external file, save if not found
+	if (!amx_load_setting_string(ZP_SETTINGS_FILE, "Weapon Models", "V_KNIFE HUMAN", g_model_vknife_human, charsmax(g_model_vknife_human)))
+		amx_save_setting_string(ZP_SETTINGS_FILE, "Weapon Models", "V_KNIFE HUMAN", g_model_vknife_human)
+	
+	// Precache models
+	precache_model(g_model_vknife_human)
+}
+
 public plugin_natives()
 {
 	register_library("zp50_class_human")
 	register_native("zp_class_human_get_current", "native_class_human_get_current")
 	register_native("zp_class_human_get_next", "native_class_human_get_next")
 	register_native("zp_class_human_set_next", "native_class_human_set_next")
+	register_native("zp_class_human_get_max_health", "_class_human_get_max_health")
 	register_native("zp_class_human_register", "native_class_human_register")
 	register_native("zp_class_human_register_model", "_class_human_register_model")
 	register_native("zp_class_human_get_id", "native_class_human_get_id")
@@ -240,6 +261,9 @@ public menu_humanclass(id, menuid, item)
 	zp_colored_print(id, "%L: %s", id, "HUMAN_SELECT", name)
 	zp_colored_print(id, "%L: %d %L: %d %L: %.2fx", id, "ZOMBIE_ATTRIB1", ArrayGetCell(g_HumanClassHealth, g_HumanClassNext[id]), id, "ZOMBIE_ATTRIB2", cs_maxspeed_display_value(maxspeed), id, "ZOMBIE_ATTRIB3", Float:ArrayGetCell(g_HumanClassGravity, g_HumanClassNext[id]))
 	
+	// Execute class select post forward
+	ExecuteForward(g_Forwards[FW_CLASS_SELECT_POST], g_ForwardResult, id, index)
+	
 	menu_destroy(menuid)
 	return PLUGIN_HANDLED;
 }
@@ -305,6 +329,15 @@ public zp_fw_core_cure_post(id, attacker)
 		// No models registered for current class, use default model
 		cs_reset_player_model(id)
 	}
+	
+	// Set custom knife model
+	cs_set_player_view_model(id, CSW_KNIFE, g_model_vknife_human)
+}
+
+public zp_fw_core_infect(id, attacker)
+{
+	// Remove custom knife model
+	cs_reset_player_view_model(id, CSW_KNIFE)
 }
 
 public native_class_human_get_current(plugin_id, num_params)
@@ -353,6 +386,27 @@ public native_class_human_set_next(plugin_id, num_params)
 	
 	g_HumanClassNext[id] = classid
 	return true;
+}
+
+public _class_human_get_max_health(plugin_id, num_params)
+{
+	new id = get_param(1)
+	
+	if (!is_user_connected(id))
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", id)
+		return -1;
+	}
+	
+	new classid = get_param(2)
+	
+	if (classid < 0 || classid >= g_HumanClassCount)
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid human class id (%d)", classid)
+		return -1;
+	}
+	
+	return ArrayGetCell(g_HumanClassHealth, classid);
 }
 
 public native_class_human_register(plugin_id, num_params)
@@ -424,7 +478,6 @@ public native_class_human_register(plugin_id, num_params)
 		amx_save_setting_string(ZP_HUMANCLASSES_FILE, real_name, "MODELS", "")
 	}
 	ArrayPushCell(g_HumanClassModelsHandle, class_models)
-	
 	
 	// Health
 	if (!amx_load_setting_int(ZP_HUMANCLASSES_FILE, real_name, "HEALTH", health))

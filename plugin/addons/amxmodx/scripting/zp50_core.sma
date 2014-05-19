@@ -128,7 +128,7 @@ public fw_PlayerSpawn_Post(id)
 	
 	// Set zombie/human attributes upon respawn
 	if (flag_get(g_RespawnAsZombie, id))
-		InfectPlayer(id)
+		InfectPlayer(id, id)
 	else
 		CurePlayer(id)
 	
@@ -327,6 +327,12 @@ public native_core_infect(plugin_id, num_params)
 	
 	new attacker = get_param(2)
 	
+	if (attacker && !is_user_alive(attacker))
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", attacker)
+		return false;
+	}
+	
 	InfectPlayer(id, attacker)
 	return true;
 }
@@ -348,6 +354,12 @@ public native_core_cure(plugin_id, num_params)
 	}
 	
 	new attacker = get_param(2)
+	
+	if (attacker && !is_user_alive(attacker))
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", attacker)
+		return false;
+	}
 	
 	CurePlayer(id, attacker)
 	return true;

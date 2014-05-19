@@ -153,6 +153,10 @@ public zp_fw_core_infect_post(id, attacker)
 				DisableNightVision(id)
 		}
 	}
+	
+	// Always give nightvision to PODBots
+	if (is_user_bot(id) && !cs_get_user_nvg(id))
+		cs_set_user_nvg(id, 1)
 }
 
 public zp_fw_core_cure_post(id, attacker)
@@ -202,6 +206,10 @@ public zp_fw_core_cure_post(id, attacker)
 				DisableNightVision(id)
 		}
 	}
+	
+	// Always give nightvision to PODBots
+	if (is_user_bot(id) && !cs_get_user_nvg(id))
+		cs_set_user_nvg(id, 1)
 }
 
 public clcmd_nightvision_toggle(id)

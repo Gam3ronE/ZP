@@ -48,7 +48,8 @@ new g_menu_data[MAXPLAYERS+1]
 
 enum _:TOTAL_FORWARDS
 {
-	FW_CLASS_SELECT_PRE = 0
+	FW_CLASS_SELECT_PRE = 0,
+	FW_CLASS_SELECT_POST
 }
 new g_Forwards[TOTAL_FORWARDS]
 new g_ForwardResult
@@ -78,6 +79,7 @@ public plugin_init()
 	register_clcmd("say /class", "show_class_menu")
 	
 	g_Forwards[FW_CLASS_SELECT_PRE] = CreateMultiForward("zp_fw_class_zombie_select_pre", ET_CONTINUE, FP_CELL, FP_CELL)
+	g_Forwards[FW_CLASS_SELECT_POST] = CreateMultiForward("zp_fw_class_zombie_select_post", ET_CONTINUE, FP_CELL, FP_CELL)
 }
 
 public plugin_precache()
@@ -274,6 +276,9 @@ public menu_zombieclass(id, menuid, item)
 	// Show selected zombie class
 	zp_colored_print(id, "%L: %s", id, "ZOMBIE_SELECT", name)
 	zp_colored_print(id, "%L: %d %L: %d %L: %.2fx %L %.2fx", id, "ZOMBIE_ATTRIB1", ArrayGetCell(g_ZombieClassHealth, g_ZombieClassNext[id]), id, "ZOMBIE_ATTRIB2", cs_maxspeed_display_value(maxspeed), id, "ZOMBIE_ATTRIB3", Float:ArrayGetCell(g_ZombieClassGravity, g_ZombieClassNext[id]), id, "ZOMBIE_ATTRIB4", Float:ArrayGetCell(g_ZombieClassKnockback, g_ZombieClassNext[id]))
+	
+	// Execute class select post forward
+	ExecuteForward(g_Forwards[FW_CLASS_SELECT_POST], g_ForwardResult, id, index)
 	
 	menu_destroy(menuid)
 	return PLUGIN_HANDLED;

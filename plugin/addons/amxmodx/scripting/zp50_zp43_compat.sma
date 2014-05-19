@@ -27,6 +27,7 @@
 #include <zp50_items>
 #define LIBRARY_AMMOPACKS "zp50_ammopacks"
 #include <zp50_ammopacks>
+#define LIBRARY_GRENADE_FROST "zp50_grenade_frost"
 #include <zp50_grenade_frost>
 
 #define CS_MONEY_LIMIT 16000
@@ -87,8 +88,10 @@ new g_ForwardResult
 new g_MaxPlayers
 
 new cvar_ammopack_to_money_enable, cvar_ammopack_to_money_ratio
+new cvar_zombie_first_hp_multiplier
 
 new g_GameModeInfectionID, g_GameModeMultiID, g_GameModeNemesisID, g_GameModeSurvivorID, g_GameModeSwarmID, g_GameModePlagueID
+new g_ModeStarted
 
 new Array:g_ItemID, Array:g_ItemTeams
 
@@ -96,11 +99,12 @@ public plugin_init()
 {
 	register_plugin("[ZP] ZP 4.3 Subplugin Compatibility", ZP_VERSION_STRING, "ZP Dev Team")
 	
+	register_event("HLTV", "event_round_start", "a", "1=0", "2=0")
 	g_MaxPlayers = get_maxplayers()
 	
-	register_cvar("zp_on", "1", FCVAR_SERVER|FCVAR_SPONLY)
 	cvar_ammopack_to_money_enable = register_cvar("zp_ammopack_to_money_enable", "1")
 	cvar_ammopack_to_money_ratio = register_cvar("zp_ammopack_to_money_ratio", "160") // 1 Ammo Pack = $ 160
+	cvar_zombie_first_hp_multiplier = get_cvar_pointer("zp_zombie_first_hp_multiplier")
 	
 	// Forwards
 	g_Forwards[FW_ROUND_STARTED] = CreateMultiForward("zp_round_started", ET_IGNORE, FP_CELL, FP_CELL)
@@ -115,6 +119,17 @@ public plugin_init()
 	g_Forwards[FW_USER_UNFROZEN] = CreateMultiForward("zp_user_unfrozen", ET_IGNORE, FP_CELL)
 	g_Forwards[FW_USER_LAST_ZOMBIE] = CreateMultiForward("zp_user_last_zombie", ET_IGNORE, FP_CELL)
 	g_Forwards[FW_USER_LAST_HUMAN] = CreateMultiForward("zp_user_last_human", ET_IGNORE, FP_CELL)
+}
+
+public plugin_precache()
+{
+	// For subplugins that check if ZP is enabled
+	register_cvar("zp_on", "1", FCVAR_SERVER|FCVAR_SPONLY)
+}
+
+public event_round_start()
+{
+	g_ModeStarted = false
 }
 
 public zp_fw_gamemodes_start(game_mode_id)
@@ -181,6 +196,8 @@ public zp_fw_gamemodes_start(game_mode_id)
 		// Custom game mode started, pass MODE_CUSTOM (0) as mode parameter
 		ExecuteForward(g_Forwards[FW_ROUND_STARTED], g_ForwardResult, MODE_CUSTOM, 0)
 	}
+	
+	g_ModeStarted = true
 }
 
 public zp_fw_gamemodes_end(game_mode_id)
@@ -200,7 +217,7 @@ public zp_fw_core_infect_pre(id, attacker)
 	else
 		ExecuteForward(g_Forwards[FW_USER_INFECT_ATTEMPT], g_ForwardResult, id, attacker, false)
 	
-	if (g_ForwardResult >= ZP_PLUGIN_HANDLED)
+	if (g_ForwardResult >= ZP_PLUGIN_HANDLED && g_ModeStarted && zp_core_get_zombie_count() > 0)
 		return PLUGIN_HANDLED;
 	return PLUGIN_CONTINUE;
 }
@@ -228,7 +245,7 @@ public zp_fw_core_cure_pre(id, attacker)
 	else
 		ExecuteForward(g_Forwards[FW_USER_HUMANIZE_ATTEMPT], g_ForwardResult, id, false)
 	
-	if (g_ForwardResult >= ZP_PLUGIN_HANDLED)
+	if (g_ForwardResult >= ZP_PLUGIN_HANDLED && g_ModeStarted && zp_core_get_human_count() > 0)
 		return PLUGIN_HANDLED;
 	return PLUGIN_CONTINUE;
 }
@@ -341,7 +358,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_EXTRAITEMS) || equal(module, LIBRARY_FLASHLIGHT) || equal(module, LIBRARY_AMMOPACKS))
+	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_EXTRAITEMS) || equal(module, LIBRARY_FLASHLIGHT) || equal(module, LIBRARY_AMMOPACKS) || equal(module, LIBRARY_GRENADE_FROST))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -523,13 +540,20 @@ public native_set_user_ammo_packs(plugin_id, num_params)
 public native_get_zombie_maxhealth(plugin_id, num_params)
 {
 	new id = get_param(1)
-	new classid = get_param(2)
 	
 	if (!is_user_connected(id))
 	{
 		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", id)
 		return -1;
 	}
+	
+	new classid = zp_class_zombie_get_current(id)
+	
+	if (classid == ZP_INVALID_ZOMBIE_CLASS)
+		return -1;
+	
+	if (cvar_zombie_first_hp_multiplier && zp_core_is_first_zombie(id))
+		return floatround(float(zp_class_zombie_get_max_health(id, classid)) * get_pcvar_float(cvar_zombie_first_hp_multiplier));
 	
 	return zp_class_zombie_get_max_health(id, classid);
 }
@@ -606,6 +630,13 @@ public native_infect_user(plugin_id, num_params)
 	}
 	
 	new attacker = get_param(2)
+	
+	if (attacker && !is_user_alive(attacker))
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", attacker)
+		return false;
+	}
+	
 	if (attacker)
 		return zp_core_infect(id, attacker);
 	new silent = get_param(3)
@@ -726,7 +757,14 @@ public native_override_user_model(plugin_id, num_params)
 
 public native_has_round_started(plugin_id, num_params)
 {
-	return (zp_gamemodes_get_current() != ZP_NO_GAME_MODE);
+	if (!g_ModeStarted)
+	{
+		if (zp_gamemodes_get_current() == ZP_NO_GAME_MODE)
+			return 0; // not started
+		
+		return 2; // starting
+	}
+	return 1; // started
 }
 
 public native_is_nemesis_round(plugin_id, num_params)

@@ -157,16 +157,12 @@ public zp_fw_core_infect_post(id, attacker)
 		}
 	}
 	
-	// Infection special effects (delay needed so origin is updated after spawning)
-	set_task(0.1, "infection_effects", id)
+	// Infection special effects
+	infection_effects(id)
 }
 
-public infection_effects(id)
+infection_effects(id)
 {
-	// Player died/disconnected
-	if (!is_user_alive(id))
-		return;
-	
 	// Screen fade?
 	if (get_pcvar_num(cvar_infect_screen_fade))
 	{

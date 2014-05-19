@@ -87,11 +87,20 @@ public fw_PlayerKilled_Post(victim, attacker, shouldgib)
 // Respawn Player Task (deathmatch)
 public respawn_player_task(taskid)
 {
+	// Already alive or round ended
+	if (is_user_alive(ID_RESPAWN) || zp_gamemodes_get_current() == ZP_NO_GAME_MODE)
+		return;
+	
 	// Get player's team
 	new CsTeams:team = cs_get_user_team(ID_RESPAWN)
 	
 	// Player moved to spectators
 	if (team == CS_TEAM_SPECTATOR || team == CS_TEAM_UNASSIGNED)
+		return;
+	
+	// Allow other plugins to decide whether player can respawn or not
+	ExecuteForward(g_Forwards[FW_USER_RESPAWN_PRE], g_ForwardResult, ID_RESPAWN)
+	if (g_ForwardResult >= PLUGIN_HANDLED)
 		return;
 	
 	// Respawn as zombie?
@@ -100,11 +109,6 @@ public respawn_player_task(taskid)
 		// Only allow respawning as zombie after a game mode started
 		if (g_GameModeStarted) zp_core_respawn_as_zombie(ID_RESPAWN, true)
 	}
-	
-	// Allow other plugins to decide whether player can respawn or not
-	ExecuteForward(g_Forwards[FW_USER_RESPAWN_PRE], g_ForwardResult, ID_RESPAWN)
-	if (g_ForwardResult >= PLUGIN_HANDLED)
-		return;
 	
 	respawn_player_manually(ID_RESPAWN)
 }

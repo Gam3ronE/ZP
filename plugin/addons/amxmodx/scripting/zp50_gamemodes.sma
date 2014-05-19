@@ -46,7 +46,7 @@ new g_ForwardResult
 new g_MaxPlayers
 new g_HudSync
 
-new cvar_gamemode_delay, cvar_round_start_show_hud
+new cvar_gamemode_delay, cvar_round_start_show_hud, cvar_prevent_consecutive
 
 // Game Modes data
 new Array:g_GameModeName
@@ -55,6 +55,7 @@ new g_GameModeCount
 new g_DefaultGameMode = 0 // first game mode is used as default if none specified
 new g_ChosenGameMode = ZP_NO_GAME_MODE
 new g_CurrentGameMode = ZP_NO_GAME_MODE
+new g_LastGameMode = ZP_NO_GAME_MODE
 new g_AllowInfection
 
 public plugin_init()
@@ -75,6 +76,7 @@ public plugin_init()
 	
 	cvar_gamemode_delay = register_cvar("zp_gamemode_delay", "10")
 	cvar_round_start_show_hud = register_cvar("zp_round_start_show_hud", "1")
+	cvar_prevent_consecutive = register_cvar("zp_prevent_consecutive_modes", "1")
 	
 	g_Forwards[FW_GAME_MODE_CHOOSE_PRE] = CreateMultiForward("zp_fw_gamemodes_choose_pre", ET_CONTINUE, FP_CELL, FP_CELL)
 	g_Forwards[FW_GAME_MODE_CHOOSE_POST] = CreateMultiForward("zp_fw_gamemodes_choose_post", ET_IGNORE, FP_CELL, FP_CELL)
@@ -400,10 +402,11 @@ public choose_game_mode()
 			ExecuteForward(g_Forwards[FW_GAME_MODE_CHOOSE_PRE], g_ForwardResult, g_ChosenGameMode, false)
 			
 			// Custom game mode can start?
-			if (g_ForwardResult < PLUGIN_HANDLED)
+			if (g_ForwardResult < PLUGIN_HANDLED && (!get_pcvar_num(cvar_prevent_consecutive) || g_LastGameMode != index))
 			{
 				// Execute game mode chosen forward
 				ExecuteForward(g_Forwards[FW_GAME_MODE_CHOOSE_POST], g_ForwardResult, g_ChosenGameMode, RANDOM_TARGET_PLAYER)
+				g_LastGameMode = g_ChosenGameMode
 				break;
 			}
 		}
@@ -417,6 +420,7 @@ public choose_game_mode()
 			{
 				// Execute game mode chosen forward
 				ExecuteForward(g_Forwards[FW_GAME_MODE_CHOOSE_POST], g_ForwardResult, g_ChosenGameMode, RANDOM_TARGET_PLAYER)
+				g_LastGameMode = g_ChosenGameMode
 				break;
 			}
 			else

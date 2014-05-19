@@ -18,6 +18,10 @@
 #include <amx_settings_api>
 #include <cs_ham_bots_api>
 #include <zp50_items>
+#define LIBRARY_GRENADE_FROST "zp50_grenade_frost"
+#include <zp50_grenade_frost>
+#define LIBRARY_GRENADE_FIRE "zp50_grenade_fire"
+#include <zp50_grenade_fire>
 #define LIBRARY_NEMESIS "zp50_class_nemesis"
 #include <zp50_class_nemesis>
 
@@ -98,12 +102,15 @@ public plugin_precache()
 
 public plugin_natives()
 {
+	register_library("zp50_item_zombie_madness")
+	register_native("zp_item_zombie_madness_get", "native_item_zombie_madness_get")
+	
 	set_module_filter("module_filter")
 	set_native_filter("native_filter")
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS))
+	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_GRENADE_FROST) || equal(module, LIBRARY_GRENADE_FIRE))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -114,6 +121,19 @@ public native_filter(const name[], index, trap)
 		return PLUGIN_HANDLED;
 		
 	return PLUGIN_CONTINUE;
+}
+
+public native_item_zombie_madness_get(plugin_id, num_params)
+{
+	new id = get_param(1)
+	
+	if (!is_user_alive(id))
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", id)
+		return false;
+	}
+	
+	return flag_get_boolean(g_MadnessBlockDamage, id);
 }
 
 public zp_fw_items_select_pre(id, itemid, ignorecost)
@@ -197,6 +217,24 @@ public fw_TakeDamage(victim, inflictor, attacker)
 		return HAM_SUPERCEDE;
 	
 	return HAM_IGNORED;
+}
+
+public zp_fw_grenade_frost_pre(id)
+{
+	// Prevent frost when victim has zombie madness
+	if (flag_get(g_MadnessBlockDamage, id))
+		return PLUGIN_HANDLED;
+	
+	return PLUGIN_CONTINUE;
+}
+
+public zp_fw_grenade_fire_pre(id)
+{
+	// Prevent burning when victim has zombie madness
+	if (flag_get(g_MadnessBlockDamage, id))
+		return PLUGIN_HANDLED;
+	
+	return PLUGIN_CONTINUE;
 }
 
 public zp_fw_core_cure(id, attacker)

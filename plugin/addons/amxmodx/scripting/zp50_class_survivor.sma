@@ -82,6 +82,7 @@ public plugin_init()
 	RegisterHam(Ham_Touch, "weapon_shield", "fw_TouchWeapon")
 	RegisterHam(Ham_Killed, "player", "fw_PlayerKilled")
 	RegisterHamBots(Ham_Killed, "fw_PlayerKilled")
+	register_forward(FM_ClientDisconnect, "fw_ClientDisconnect_Post", 1)
 	
 	g_MaxPlayers = get_maxplayers()
 	
@@ -147,8 +148,22 @@ public plugin_natives()
 
 public client_disconnect(id)
 {
+	if (flag_get(g_IsSurvivor, id))
+	{
+		// Remove survivor glow
+		if (get_pcvar_num(cvar_survivor_glow))
+			set_user_rendering(id)
+		
+		// Remove survivor aura
+		if (get_pcvar_num(cvar_survivor_aura))
+			remove_task(id+TASK_AURA)
+	}
+}
+
+public fw_ClientDisconnect_Post(id)
+{
+	// Reset flags AFTER disconnect (to allow checking if the player was survivor before disconnecting)
 	flag_unset(g_IsSurvivor, id)
-	remove_task(id+TASK_AURA)
 }
 
 public clcmd_drop(id)

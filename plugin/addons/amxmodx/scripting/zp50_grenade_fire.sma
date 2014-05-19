@@ -56,6 +56,14 @@ const NADE_TYPE_NAPALM = 2222
 
 #define MAXPLAYERS 32
 
+// Custom Forwards
+enum _:TOTAL_FORWARDS
+{
+	FW_USER_BURN_PRE = 0
+}
+new g_Forwards[TOTAL_FORWARDS]
+new g_ForwardResult
+
 new g_BurningDuration[MAXPLAYERS+1]
 
 new g_MsgDamage
@@ -79,6 +87,8 @@ public plugin_init()
 	cvar_grenade_fire_slowdown = register_cvar("zp_grenade_fire_slowdown", "0.5")
 	cvar_grenade_fire_hudicon = register_cvar("zp_grenade_fire_hudicon", "1")
 	cvar_grenade_fire_explosion = register_cvar("zp_grenade_fire_explosion", "0")
+	
+	g_Forwards[FW_USER_BURN_PRE] = CreateMultiForward("zp_fw_grenade_fire_pre", ET_CONTINUE, FP_CELL)
 }
 
 public plugin_precache()
@@ -145,6 +155,10 @@ public plugin_precache()
 
 public plugin_natives()
 {
+	register_library("zp50_grenade_fire")
+	register_native("zp_grenade_fire_get", "native_grenade_fire_get")
+	register_native("zp_grenade_fire_set", "native_grenade_fire_set")
+	
 	set_module_filter("module_filter")
 	set_native_filter("native_filter")
 }
@@ -161,6 +175,62 @@ public native_filter(const name[], index, trap)
 		return PLUGIN_HANDLED;
 		
 	return PLUGIN_CONTINUE;
+}
+
+public native_grenade_fire_get(plugin_id, num_params)
+{
+	new id = get_param(1)
+	
+	if (!is_user_alive(id))
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", id)
+		return false;
+	}
+	
+	return task_exists(id+TASK_BURN);
+}
+
+public native_grenade_fire_set(plugin_id, num_params)
+{
+	new id = get_param(1)
+	
+	if (!is_user_alive(id))
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", id)
+		return false;
+	}
+	
+	new set = get_param(2)
+	
+	// End fire
+	if (!set)
+	{
+		// Not burning
+		if (!task_exists(id+TASK_BURN))
+			return true;
+		
+		// Get player origin
+		static origin[3]
+		get_user_origin(id, origin)
+		
+		// Smoke sprite
+		message_begin(MSG_PVS, SVC_TEMPENTITY, origin)
+		write_byte(TE_SMOKE) // TE id
+		write_coord(origin[0]) // x
+		write_coord(origin[1]) // y
+		write_coord(origin[2]-50) // z
+		write_short(g_smokeSpr) // sprite
+		write_byte(random_num(15, 20)) // scale
+		write_byte(random_num(10, 20)) // framerate
+		message_end()
+		
+		// Task not needed anymore
+		remove_task(id+TASK_BURN)
+		return true;
+	}
+	
+	// Set on fire
+	return set_on_fire(id);
 }
 
 public zp_fw_core_cure_post(id, attacker)
@@ -301,35 +371,46 @@ fire_explode(ent)
 		if (!is_user_alive(victim) || !zp_core_is_zombie(victim))
 			continue;
 		
-		// Heat icon?
-		if (get_pcvar_num(cvar_grenade_fire_hudicon))
-		{
-			message_begin(MSG_ONE_UNRELIABLE, g_MsgDamage, _, victim)
-			write_byte(0) // damage save
-			write_byte(0) // damage take
-			write_long(DMG_BURN) // damage type
-			write_coord(0) // x
-			write_coord(0) // y
-			write_coord(0) // z
-			message_end()
-		}
-		
-		// Nemesis Class loaded?
-		if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(victim))
-		{
-			// fire duration (nemesis)
-			g_BurningDuration[victim] += get_pcvar_num(cvar_grenade_fire_duration)
-		}
-		else
-		{
-			// fire duration (zombie)
-			g_BurningDuration[victim] += get_pcvar_num(cvar_grenade_fire_duration) * 5
-		}
-		
-		// Set burning task on victim
-		remove_task(victim+TASK_BURN)
-		set_task(0.2, "burning_flame", victim+TASK_BURN, _, _, "b")
+		set_on_fire(victim)
 	}
+}
+
+set_on_fire(victim)
+{
+	// Allow other plugins to decide whether player should be burned or not
+	ExecuteForward(g_Forwards[FW_USER_BURN_PRE], g_ForwardResult, victim)
+	if (g_ForwardResult >= PLUGIN_HANDLED)
+		return false;
+	
+	// Heat icon?
+	if (get_pcvar_num(cvar_grenade_fire_hudicon))
+	{
+		message_begin(MSG_ONE_UNRELIABLE, g_MsgDamage, _, victim)
+		write_byte(0) // damage save
+		write_byte(0) // damage take
+		write_long(DMG_BURN) // damage type
+		write_coord(0) // x
+		write_coord(0) // y
+		write_coord(0) // z
+		message_end()
+	}
+	
+	// Reduced duration for Nemesis
+	if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(victim))
+	{
+		// fire duration (nemesis)
+		g_BurningDuration[victim] += get_pcvar_num(cvar_grenade_fire_duration)
+	}
+	else
+	{
+		// fire duration (zombie)
+		g_BurningDuration[victim] += get_pcvar_num(cvar_grenade_fire_duration) * 5
+	}
+	
+	// Set burning task on victim
+	remove_task(victim+TASK_BURN)
+	set_task(0.2, "burning_flame", victim+TASK_BURN, _, _, "b")
+	return true;
 }
 
 // Burning Flames
