@@ -1,7 +1,7 @@
 [en]
 CMD_CANT_LAST_HUMAN = You can't use this command on the last human.
 CMD_CANT_LAST_ZOMBIE = You can't use this command on the last zombie.
-CMD_ONLY_AFTER_GAME_MODE = You can only use this command after a game mode started.
+CMD_ONLY_AFTER_GAME_MODE = You can only use this command after a game mode has started.
 GAME_MODE_CANT_START = Game mode can't be started right now.
 CANT_RESPAWN = Player can't be respawned
 ALREADY_SURVIVOR = Player already a survivor
@@ -11,7 +11,7 @@ ALREADY_ZOMBIE = Player already a zombie
 INVALID_GAME_MODE = Invalid game mode id
 CMD_START_GAME_MODE = start Game Mode
 
-CANT_BUY_WEAPONS_DEAD = You can't buy weapons when dead.
+CANT_BUY_WEAPONS_DEAD = You can't buy weapons when you're dead.
 CUSTOM_BUY_DISABLED = Custom buy menus are disabled.
 BUY_MENU_TIME_EXPIRED = Buy menu time has expired.
 CANT_BUY_ITEMS_DEAD = You can't buy extra items when dead.
