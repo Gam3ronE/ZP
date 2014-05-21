@@ -16,9 +16,9 @@
 new const humanclass2_name[] = "Raptor Human"
 new const humanclass2_info[] = "HP-- Speed+ Gravity+"
 new const humanclass2_models[][] = { "leet" }
-const humanclass2_health = 50
-const Float:humanclass2_speed = 1.2
-const Float:humanclass2_gravity = 1.2
+const humanclass2_health = 200
+const Float:humanclass2_speed = 1.25
+const Float:humanclass2_gravity = 1.0
 
 new g_HumanClassID
 

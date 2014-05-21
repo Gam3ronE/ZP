@@ -16,7 +16,7 @@
 new const humanclass1_name[] = "Classic Human"
 new const humanclass1_info[] = "=Balanced="
 new const humanclass1_models[][] = { "arctic" , "guerilla" , "leet" , "terror" , "gign" , "gsg9" , "sas" , "urban" }
-const humanclass1_health = 100
+const humanclass1_health = 300
 const Float:humanclass1_speed = 1.0
 const Float:humanclass1_gravity = 1.0
 

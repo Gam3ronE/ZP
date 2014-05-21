@@ -29,9 +29,9 @@ Age=1058909237
 [zp50_class_human.sma]
 Age=1066634068
 [zp50_class_human_classic.sma]
-Age=1059725386
+Age=1152753388
 [zp50_class_human_raptor.sma]
-Age=1058217496
+Age=1152753525
 [zp50_class_nemesis.sma]
 Age=1065194417
 [zp50_class_survivor.sma]
@@ -97,7 +97,7 @@ Age=1058538353
 [zp50_item_antidote.sma]
 Age=1059759277
 [zp50_item_infection_bomb.sma]
-Age=1152630176
+Age=1152753969
 [zp50_item_nightvision.sma]
 Age=1058538988
 [zp50_item_weapons.sma]
@@ -162,3 +162,7 @@ Age=1152743864
 Age=1152743908
 [zp50_item_multi-jump.sma]
 Age=1152747045
+[zp50_class_human_light.sma]
+Age=1152753675
+[zp50_item_golden_ak-47.sma]
+Age=1152754205
