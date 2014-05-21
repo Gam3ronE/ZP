@@ -97,7 +97,7 @@ MOTD_INFO2_J = <br>Knockback: %L
 MOTD_INFO3 = <meta charset=UTF-8><body bgcolor=\"#000000\"><font color=\"#FF0505\"><b>Zombies:</b> their objective is to infect every alive human. They are able to see in the dark, but can only attack melee. There are many zombie classes to choose from, each with his own strenghts and weaknesses, but all capable of eating brains.<br><br><br><u>Current server settings:</u><br>
 MOTD_INFO3_A = <br>Zombie Health: %d
 MOTD_INFO3_B = <br>First Zombie Health: %d
-MOTD_INFO3_C = <br>Armor: %d%% damage taken
+MOTD_INFO3_C = <br>Armour: %d%% damage taken
 MOTD_INFO3_D = <br>Speed: %d
 MOTD_INFO3_E = <br>Gravity: %d
 MOTD_INFO3_F = <br>HP for Infection: %d
@@ -133,14 +133,14 @@ MOTD_DISABLED = Disabled
 MOTD_FOG = Fog
 MOTD_RAIN = Rain
 MOTD_SNOW = Snow
-MOTD_ROTATING = Rotating doors removed
-MOTD_DOORS = All doors removed
-MOTD_DM_HUMAN = Respawn as human
-MOTD_DM_ZOMBIE = Respawn as zombie
+MOTD_ROTATING = Rotating Doors Removed
+MOTD_DOORS = All Doors Removed
+MOTD_DM_HUMAN = Respawn as Human
+MOTD_DM_ZOMBIE = Respawn as Zombie
 MOTD_LIMITED = Limited
-MOTD_AMMO_BP = Unlimited reloads
-MOTD_AMMO_CLIP = Unlimited clip
-MOTD_LASTZOMBIE = Only on last zombie
+MOTD_AMMO_BP = Unlimited Reloads
+MOTD_AMMO_CLIP = Unlimited Clip
+MOTD_LASTZOMBIE = Only on Last Zombie
 
 ZOMBIE_ATTRIB1 = Health
 ZOMBIE_ATTRIB2 = Speed
@@ -155,11 +155,11 @@ CLASS_NEMESIS = Nemesis
 
 LAST_ZOMBIE_LEFT = The last zombie has left, %s is the new zombie.
 LAST_HUMAN_LEFT = The last human has left, %s is the new human.
-NOT_ENOUGH_AMMO = You dont have enough ammo packs.
+NOT_ENOUGH_AMMO = You don't have enough ammo packs.
 AMMO_BOUGHT = You purchased extra ammo for your guns.
 ZOMBIE_SELECT = Your zombie class after the next infection will be
 BUY_ENABLED = Your buy menu has been re-enabled.
-AMMO_PACKS1 = Ammo packs:
+AMMO_PACKS1 = Ammo Packs:
 AMMO_PACKS2 = ammo packs
 SPECTATING = Spectating:
 

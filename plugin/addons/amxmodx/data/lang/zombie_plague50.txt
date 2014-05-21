@@ -14,13 +14,13 @@ CMD_START_GAME_MODE = start Game Mode
 CANT_BUY_WEAPONS_DEAD = You can't buy weapons when you're dead.
 CUSTOM_BUY_DISABLED = Custom buy menus are disabled.
 BUY_MENU_TIME_EXPIRED = Buy menu time has expired.
-CANT_BUY_ITEMS_DEAD = You can't buy extra items when dead.
+CANT_BUY_ITEMS_DEAD = You can't buy extra items when you're dead.
 CMD_NOT_HCLASSES = Human Classes are disabled.
 NO_ADMIN_MENU = Admin menu not available.
 NO_CLASSES = No classes are currently available to you.
 NO_EXTRA_ITEMS = No extra items are currently available to you.
 CANT_CHANGE_TEAM = You can't change team right now.
-NOT_ENOUGH_MONEY = You dont have enough money.
+NOT_ENOUGH_MONEY = You don't have enough money.
 REQUIRED_AMOUNT = %d required
 HUMAN_SELECT = Your next human class will be
 
@@ -28,7 +28,7 @@ MONEY1 = Money:
 MENU_BUY3_TITLE = Grenades
 MENU_HCLASS = Choose Human Class
 MENU_CHOOSE_TEAM = Choose Team
-MENU_ADMIN_START_GAME_MODE = Start Game Mode (use at roundstart)
+MENU_ADMIN_START_GAME_MODE = Start Game Mode (use at round start)
 NOTICE_ARMAGEDDON = Armageddon Mode !!!
 NOTICE_ANTIDOTE2 = %s has given %s an antidote...
 
