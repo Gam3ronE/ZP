@@ -15,7 +15,7 @@ This zombie class made by Petr & 5c0r.
 #include <amxmodx>
 #include <engine>
 #include <fakemeta>
-#include <zombieplague>
+#include <zombie_plague_advance>
 #include <fun>
 #include <hamsandwich>
 #include <fakemeta_util>
