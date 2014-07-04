@@ -141,15 +141,15 @@ public zp_fw_items_select_pre(id, itemid, ignorecost)
     // This is not our item 
     if (itemid != g_ItemID) 
         return ZP_ITEM_AVAILABLE; 
+		
+    // Infection bomb only available to zombies 
+    if (!zp_core_is_zombie(id)) 
+        return ZP_ITEM_DONT_SHOW; 
      
     // Infection bomb only available during infection modes 
     new current_mode = zp_gamemodes_get_current() 
     if (current_mode != g_GameModeInfectionID && current_mode != g_GameModeMultiID) 
         return ZP_ITEM_NOT_AVAILABLE; 
-     
-    // Infection bomb only available to zombies 
-    if (!zp_core_is_zombie(id)) 
-        return ZP_ITEM_DONT_SHOW; 
      
     // Display remaining item count for this round 
     static text[32] 
