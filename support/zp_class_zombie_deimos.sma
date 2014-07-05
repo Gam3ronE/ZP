@@ -107,8 +107,8 @@ public fwd_cmd_start(id, uc_handle, seed)
     static buttons 
     buttons = get_uc(uc_handle, UC_Buttons) 
      
-    // If you press Mouse 2 and the person you're aiming at is not a survivor and not a sniper then drop their weapon
-    if(buttons & IN_ATTACK2 && !zp_get_user_survivor && !zp_get_user_sniper) { 
+    // If you press Mouse 2 and the drop weapon function is called
+    if(buttons & IN_ATTACK2) { 
         drop_weapon(id) // Here we drop their weapon
         g_cd[id] = true 
     } 
@@ -118,6 +118,8 @@ public fwd_cmd_start(id, uc_handle, seed)
      
     return FMRES_HANDLED 
 } 
+
+// Here we drop the weapon
 
 drop_weapon(id) 
 { 
@@ -131,8 +133,9 @@ drop_weapon(id)
     start[2] += 16.0; // raise 
     aim[2] += 16.0; // raise 
     get_user_aiming ( id, target, body, pcvar_distance ) 
-     
-    if( is_user_alive( target ) && !zp_get_user_zombie( target ) && !zp_get_user_survivor( target ) ) 
+    
+	// Go if they're alive, not a zombie, not a survivor and not a sniper.
+    if( is_user_alive( target ) && !zp_get_user_zombie( target ) && !zp_get_user_survivor( target ) && !zp_get_user_sniper( target ) ) 
     {     
         message_begin(MSG_BROADCAST ,SVC_TEMPENTITY) 
         write_byte(TE_EXPLOSION) 
