@@ -1,5 +1,5 @@
 [amx_settings_api.sma]
-Age=1076279378
+Age=1155888320
 [cs_maxspeed_api.sma]
 Age=1058081042
 [cs_player_models_api.sma]
@@ -51,7 +51,7 @@ Age=1065193596
 [zp50_class_zombie_raptor.sma]
 Age=1058217496
 [zp50_core.sma]
-Age=1061949817
+Age=1155888189
 [zp50_deathmatch.sma]
 Age=1066112566
 [zp50_effects_cure.sma]
@@ -97,7 +97,7 @@ Age=1058538353
 [zp50_item_antidote.sma]
 Age=1059759277
 [zp50_item_infection_bomb.sma]
-Age=1152753969
+Age=1152949213
 [zp50_item_nightvision.sma]
 Age=1058538988
 [zp50_item_weapons.sma]
@@ -167,4 +167,6 @@ Age=1152753675
 [zp50_item_golden_ak-47.sma]
 Age=1152754205
 [zp50_addon_dtcm.sma]
-Age=1152754740
+Age=1152754760
+[zp5.0_bazooka_working_v3.sma]
+Age=1152756859
