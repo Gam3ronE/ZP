@@ -6,6 +6,8 @@
 	
 ================================================================================*/
 
+// Restrict buy classes to once per map for https://forums.alliedmods.net/showthread.php?p=2162383
+
 #include <amxmodx>
 #include <zombie_plague_advance>
 
