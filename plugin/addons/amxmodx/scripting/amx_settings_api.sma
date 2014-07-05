@@ -7,10 +7,6 @@
 	- API to load/save settings in a Key+Value format that resembles
 	   Windows INI files (http://en.wikipedia.org/wiki/INI_file)
 	
-	- Right now this is only meant to be used during mapchange
-	- Code is not really optimized
-	- Loading/saving takes some time, but it works!!
-	
 ================================================================================*/
 
 #include <amxmodx>
@@ -18,1360 +14,132 @@
 
 public plugin_init()
 {
-	register_plugin("[AMXX] External Settings API", "0.1", "WiLS")
+	register_plugin("[AMXX] External Settings API", "1.0", "MeRcyLeZZ")
 }
 
 public plugin_natives()
 {
 	register_library("amx_settings_api")
-	register_native("amx_load_setting_string_arr", "native_load_setting_string_arr")
-	register_native("amx_save_setting_string_arr", "native_save_setting_string_arr")
-	register_native("amx_load_setting_int_arr", "native_load_setting_int_arr")
-	register_native("amx_save_setting_int_arr", "native_save_setting_int_arr")
-	register_native("amx_load_setting_float_arr", "native_load_setting_float_arr")
-	register_native("amx_save_setting_float_arr", "native_save_setting_float_arr")
-	register_native("amx_load_setting_string", "native_load_setting_string")
-	register_native("amx_save_setting_string", "native_save_setting_string")
 	register_native("amx_load_setting_int", "native_load_setting_int")
-	register_native("amx_save_setting_int", "native_save_setting_int")
 	register_native("amx_load_setting_float", "native_load_setting_float")
+	register_native("amx_load_setting_string", "native_load_setting_string")
+	register_native("amx_save_setting_int", "native_save_setting_int")
 	register_native("amx_save_setting_float", "native_save_setting_float")
-}
-
-public native_load_setting_string_arr(plugin_id, num_params)
-{
-	new filename[32]
-	get_string(1, filename, charsmax(filename))
-	
-	if (strlen(filename) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't load settings: empty filename")
-		return false;
-	}
-	
-	new setting_section[64], setting_key[64]
-	get_string(2, setting_section, charsmax(setting_section))
-	get_string(3, setting_key, charsmax(setting_key))
-	
-	if (strlen(setting_section) < 1 || strlen(setting_key) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't load settings: empty section/key")
-		return false;
-	}
-	
-	new Array:array_handle = Array:get_param(4)
-	
-	if (array_handle == Invalid_Array)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Array not initialized")
-		return false;
-	}
-	
-	// Build customization file path
-	new path[64]
-	get_configsdir(path, charsmax(path))
-	format(path, charsmax(path), "%s/%s", path, filename)
-	
-	// File not present
-	if (!file_exists(path))
-		return false;
-	
-	// Open customization file for reading
-	new file = fopen(path, "rt")
-	
-	// File can't be opened
-	if (!file)
-		return false;
-	
-	// Set up some vars to hold parsing info
-	new linedata[1024], section[64]
-	
-	// Seek to setting's section
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// New section starting
-		if (linedata[0] == '[')
-		{
-			// Store section name without braces
-			copyc(section, charsmax(section), linedata[1], ']')
-			
-			// Is this our setting's section?
-			if (equal(section, setting_section))
-				break;
-		}
-	}
-	
-	// Section not found
-	if (!equal(section, setting_section))
-	{
-		fclose(file)
-		return false;
-	}
-	
-	// Set up some vars to hold parsing info
-	new key[64], values[1024], current_value[128]
-	
-	// Seek to setting's key
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// Blank line or comment
-		if (!linedata[0] || linedata[0] == ';') continue;
-		
-		// Section ended?
-		if (linedata[0] == '[')
-			break;
-		
-		// Get key and values
-		strtok(linedata, key, charsmax(key), values, charsmax(values), '=')
-		
-		// Trim spaces
-		trim(key)
-		trim(values)
-		
-		// Is this our setting's key?
-		if (equal(key, setting_key))
-		{
-			// Parse values
-			while (values[0] != 0 && strtok(values, current_value, charsmax(current_value), values, charsmax(values), ','))
-			{
-				// Trim spaces
-				trim(current_value)
-				trim(values)
-				
-				// Add to array
-				ArrayPushString(array_handle, current_value)
-			}
-			
-			// Values succesfully retrieved
-			fclose(file)
-			return true;
-		}
-	}
-	
-	// Key not found
-	fclose(file)
-	return false;
-}
-
-public native_save_setting_string_arr(plugin_id, num_params)
-{
-	new filename[32]
-	get_string(1, filename, charsmax(filename))
-	
-	if (strlen(filename) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't save settings: empty filename")
-		return false;
-	}
-	
-	new setting_section[64], setting_key[64]
-	get_string(2, setting_section, charsmax(setting_section))
-	get_string(3, setting_key, charsmax(setting_key))
-	
-	if (strlen(setting_section) < 1 || strlen(setting_key) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't save settings: empty section/key")
-		return false;
-	}
-	
-	new Array:array_handle = Array:get_param(4)
-	
-	if (array_handle == Invalid_Array)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Array not initialized")
-		return false;
-	}
-	
-	// Build customization file path
-	new path[64]
-	get_configsdir(path, charsmax(path))
-	format(path, charsmax(path), "%s/%s", path, filename)
-	
-	// File not present
-	if (!file_exists(path))
-	{
-		// Create new file
-		write_file(path, "", -1)
-	}
-	
-	// Open customization file for reading
-	new file = fopen(path, "rt")
-	
-	// File can't be opened
-	if (!file)
-		return false;
-	
-	// Set up some vars to hold parsing info
-	new linedata[1024], section[64], line = -1
-	
-	// Seek to setting's section
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Increase line counter
-		line++
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// New section starting
-		if (linedata[0] == '[')
-		{
-			// Store section name without braces
-			copyc(section, charsmax(section), linedata[1], ']')
-			
-			// Is this our setting's section?
-			if (equal(section, setting_section))
-				break;
-		}
-	}
-	
-	// Section not found
-	if (!equal(section, setting_section))
-	{
-		// We're done with reading
-		fclose(file)
-		
-		// Format and add section
-		formatex(linedata, charsmax(linedata), "^n[%s]", setting_section)
-		write_file(path, linedata, -1)
-		
-		// Format key
-		formatex(linedata, charsmax(linedata), "%s =", setting_key)
-		
-		// Format values
-		new index, current_value[128]
-		
-		// First value, append to linedata with no commas
-		ArrayGetString(array_handle, index, current_value, charsmax(current_value))
-		format(linedata, charsmax(linedata), "%s %s", linedata, current_value)
-		
-		// Successive values, append to linedata with commas (start on index = 1 to skip first value)
-		for (index = 1; index < ArraySize(array_handle); index++)
-		{
-			ArrayGetString(array_handle, index, current_value, charsmax(current_value))
-			format(linedata, charsmax(linedata), "%s , %s", linedata, current_value)
-		}
-		
-		// Add key + values
-		write_file(path, linedata, -1)
-		
-		return true;
-	}
-	
-	// Set up some vars to hold parsing info
-	new key[64], values[1024], txtlen
-	
-	// Seek to setting's key
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Increase line counter
-		line++
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// Blank line or comment
-		if (!linedata[0] || linedata[0] == ';') continue;
-		
-		// Section ended?
-		if (linedata[0] == '[')
-			break;
-		
-		// Get key and values
-		strtok(linedata, key, charsmax(key), values, charsmax(values), '=')
-		
-		// Trim spaces
-		trim(key)
-		trim(values)
-		
-		// Is this our setting's key?
-		if (equal(key, setting_key))
-			break;
-	}
-	
-	// We're done with reading
-	fclose(file)
-	
-	// Key not found
-	if (!equal(key, setting_key))
-	{
-		// Section ended?
-		if (linedata[0] == '[')
-			line -= 1
-		
-		// Read linedata
-		read_file(path, line, linedata, charsmax(linedata), txtlen)
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// Seek to end position of section (last key)
-		while (!linedata[0] || linedata[0] == ';')
-		{
-			// Move to previous line and read linedata
-			read_file(path, --line, linedata, charsmax(linedata), txtlen)
-			replace(linedata, charsmax(linedata), "^n", "")
-		}
-		
-		// Don't overwrite an already existing line
-		read_file(path, line, linedata, charsmax(linedata), txtlen)
-		format(linedata, charsmax(linedata), "%s^n", linedata)
-		write_file(path, linedata, line)
-		line++
-	}
-	
-	// Format key
-	formatex(linedata, charsmax(linedata), "%s =", setting_key)
-	
-	// Format values
-	new index, current_value[128]
-	
-	// First value, append to linedata with no commas
-	ArrayGetString(array_handle, index, current_value, charsmax(current_value))
-	format(linedata, charsmax(linedata), "%s %s", linedata, current_value)
-	
-	// Successive values, append to linedata with commas (start on index = 1 to skip first value)
-	for (index = 1; index < ArraySize(array_handle); index++)
-	{
-		ArrayGetString(array_handle, index, current_value, charsmax(current_value))
-		format(linedata, charsmax(linedata), "%s , %s", linedata, current_value)
-	}
-	
-	// Add key + values
-	write_file(path, linedata, line)
-	
-	return true;
-}
-
-public native_load_setting_int_arr(plugin_id, num_params)
-{
-	new filename[32]
-	get_string(1, filename, charsmax(filename))
-	
-	if (strlen(filename) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't load settings: empty filename")
-		return false;
-	}
-	
-	new setting_section[64], setting_key[64]
-	get_string(2, setting_section, charsmax(setting_section))
-	get_string(3, setting_key, charsmax(setting_key))
-	
-	if (strlen(setting_section) < 1 || strlen(setting_key) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't load settings: empty section/key")
-		return false;
-	}
-	
-	new Array:array_handle = Array:get_param(4)
-	
-	if (array_handle == Invalid_Array)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Array not initialized")
-		return false;
-	}
-	
-	// Build customization file path
-	new path[64]
-	get_configsdir(path, charsmax(path))
-	format(path, charsmax(path), "%s/%s", path, filename)
-	
-	// File not present
-	if (!file_exists(path))
-		return false;
-	
-	// Open customization file for reading
-	new file = fopen(path, "rt")
-	
-	// File can't be opened
-	if (!file)
-		return false;
-	
-	// Set up some vars to hold parsing info
-	new linedata[1024], section[64]
-	
-	// Seek to setting's section
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// New section starting
-		if (linedata[0] == '[')
-		{
-			// Store section name without braces
-			copyc(section, charsmax(section), linedata[1], ']')
-			
-			// Is this our setting's section?
-			if (equal(section, setting_section))
-				break;
-		}
-	}
-	
-	// Section not found
-	if (!equal(section, setting_section))
-	{
-		fclose(file)
-		return false;
-	}
-	
-	// Set up some vars to hold parsing info
-	new key[64], values[1024], current_value[128]
-	
-	// Seek to setting's key
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// Blank line or comment
-		if (!linedata[0] || linedata[0] == ';') continue;
-		
-		// Section ended?
-		if (linedata[0] == '[')
-			break;
-		
-		// Get key and values
-		strtok(linedata, key, charsmax(key), values, charsmax(values), '=')
-		
-		// Trim spaces
-		trim(key)
-		trim(values)
-		
-		// Is this our setting's key?
-		if (equal(key, setting_key))
-		{
-			// Parse values
-			while (values[0] != 0 && strtok(values, current_value, charsmax(current_value), values, charsmax(values), ','))
-			{
-				// Trim spaces
-				trim(current_value)
-				trim(values)
-				
-				// Add to array
-				ArrayPushCell(array_handle, str_to_num(current_value))
-			}
-			
-			// Values succesfully retrieved
-			fclose(file)
-			return true;
-		}
-	}
-	
-	// Key not found
-	fclose(file)
-	return false;
-}
-
-public native_save_setting_int_arr(plugin_id, num_params)
-{
-	new filename[32]
-	get_string(1, filename, charsmax(filename))
-	
-	if (strlen(filename) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't save settings: empty filename")
-		return false;
-	}
-	
-	new setting_section[64], setting_key[64]
-	get_string(2, setting_section, charsmax(setting_section))
-	get_string(3, setting_key, charsmax(setting_key))
-	
-	if (strlen(setting_section) < 1 || strlen(setting_key) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't save settings: empty section/key")
-		return false;
-	}
-	
-	new Array:array_handle = Array:get_param(4)
-	
-	if (array_handle == Invalid_Array)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Array not initialized")
-		return false;
-	}
-	
-	// Build customization file path
-	new path[64]
-	get_configsdir(path, charsmax(path))
-	format(path, charsmax(path), "%s/%s", path, filename)
-	
-	// File not present
-	if (!file_exists(path))
-	{
-		// Create new file
-		write_file(path, "", -1)
-	}
-	
-	// Open customization file for reading
-	new file = fopen(path, "rt")
-	
-	// File can't be opened
-	if (!file)
-		return false;
-	
-	// Set up some vars to hold parsing info
-	new linedata[1024], section[64], line = -1
-	
-	// Seek to setting's section
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Increase line counter
-		line++
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// New section starting
-		if (linedata[0] == '[')
-		{
-			// Store section name without braces
-			copyc(section, charsmax(section), linedata[1], ']')
-			
-			// Is this our setting's section?
-			if (equal(section, setting_section))
-				break;
-		}
-	}
-	
-	// Section not found
-	if (!equal(section, setting_section))
-	{
-		// We're done with reading
-		fclose(file)
-		
-		// Format and add section
-		formatex(linedata, charsmax(linedata), "^n[%s]", setting_section)
-		write_file(path, linedata, -1)
-		
-		// Format key
-		formatex(linedata, charsmax(linedata), "%s =", setting_key)
-		
-		// Format values
-		new index
-		
-		// First value, append to linedata with no commas
-		format(linedata, charsmax(linedata), "%s %d", linedata, ArrayGetCell(array_handle, index))
-		
-		// Successive values, append to linedata with commas (start on index = 1 to skip first value)
-		for (index = 1; index < ArraySize(array_handle); index++)
-			format(linedata, charsmax(linedata), "%s , %d", linedata, ArrayGetCell(array_handle, index))
-		
-		// Add key + values
-		write_file(path, linedata, -1)
-		
-		return true;
-	}
-	
-	// Set up some vars to hold parsing info
-	new key[64], values[1024], txtlen
-	
-	// Seek to setting's key
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Increase line counter
-		line++
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// Blank line or comment
-		if (!linedata[0] || linedata[0] == ';') continue;
-		
-		// Section ended?
-		if (linedata[0] == '[')
-			break;
-		
-		// Get key and values
-		strtok(linedata, key, charsmax(key), values, charsmax(values), '=')
-		
-		// Trim spaces
-		trim(key)
-		trim(values)
-		
-		// Is this our setting's key?
-		if (equal(key, setting_key))
-			break;
-	}
-	
-	// We're done with reading
-	fclose(file)
-	
-	// Key not found
-	if (!equal(key, setting_key))
-	{
-		// Section ended?
-		if (linedata[0] == '[')
-			line -= 1
-		
-		// Read linedata
-		read_file(path, line, linedata, charsmax(linedata), txtlen)
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// Seek to end position of section (last key)
-		while (!linedata[0] || linedata[0] == ';')
-		{
-			// Move to previous line and read linedata
-			read_file(path, --line, linedata, charsmax(linedata), txtlen)
-			replace(linedata, charsmax(linedata), "^n", "")
-		}
-		
-		// Don't overwrite an already existing line
-		read_file(path, line, linedata, charsmax(linedata), txtlen)
-		format(linedata, charsmax(linedata), "%s^n", linedata)
-		write_file(path, linedata, line)
-		line++
-	}
-	
-	// Format key
-	formatex(linedata, charsmax(linedata), "%s =", setting_key)
-	
-	// Format values
-	new index
-	
-	// First value, append to linedata with no commas
-	format(linedata, charsmax(linedata), "%s %d", linedata, ArrayGetCell(array_handle, index))
-	
-	// Successive values, append to linedata with commas (start on index = 1 to skip first value)
-	for (index = 1; index < ArraySize(array_handle); index++)
-		format(linedata, charsmax(linedata), "%s , %d", linedata, ArrayGetCell(array_handle, index))
-	
-	// Add key + values
-	write_file(path, linedata, line)
-	
-	return true;
-}
-
-public native_load_setting_float_arr(plugin_id, num_params)
-{
-	new filename[32]
-	get_string(1, filename, charsmax(filename))
-	
-	if (strlen(filename) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't load settings: empty filename")
-		return false;
-	}
-	
-	new setting_section[64], setting_key[64]
-	get_string(2, setting_section, charsmax(setting_section))
-	get_string(3, setting_key, charsmax(setting_key))
-	
-	if (strlen(setting_section) < 1 || strlen(setting_key) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't load settings: empty section/key")
-		return false;
-	}
-	
-	new Array:array_handle = Array:get_param(4)
-	
-	if (array_handle == Invalid_Array)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Array not initialized")
-		return false;
-	}
-	
-	// Build customization file path
-	new path[64]
-	get_configsdir(path, charsmax(path))
-	format(path, charsmax(path), "%s/%s", path, filename)
-	
-	// File not present
-	if (!file_exists(path))
-		return false;
-	
-	// Open customization file for reading
-	new file = fopen(path, "rt")
-	
-	// File can't be opened
-	if (!file)
-		return false;
-	
-	// Set up some vars to hold parsing info
-	new linedata[1024], section[64]
-	
-	// Seek to setting's section
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// New section starting
-		if (linedata[0] == '[')
-		{
-			// Store section name without braces
-			copyc(section, charsmax(section), linedata[1], ']')
-			
-			// Is this our setting's section?
-			if (equal(section, setting_section))
-				break;
-		}
-	}
-	
-	// Section not found
-	if (!equal(section, setting_section))
-	{
-		fclose(file)
-		return false;
-	}
-	
-	// Set up some vars to hold parsing info
-	new key[64], values[1024], current_value[128]
-	
-	// Seek to setting's key
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// Blank line or comment
-		if (!linedata[0] || linedata[0] == ';') continue;
-		
-		// Section ended?
-		if (linedata[0] == '[')
-			break;
-		
-		// Get key and values
-		strtok(linedata, key, charsmax(key), values, charsmax(values), '=')
-		
-		// Trim spaces
-		trim(key)
-		trim(values)
-		
-		// Is this our setting's key?
-		if (equal(key, setting_key))
-		{
-			// Parse values
-			while (values[0] != 0 && strtok(values, current_value, charsmax(current_value), values, charsmax(values), ','))
-			{
-				// Trim spaces
-				trim(current_value)
-				trim(values)
-				
-				// Add to array
-				ArrayPushCell(array_handle, str_to_float(current_value))
-			}
-			
-			// Values succesfully retrieved
-			fclose(file)
-			return true;
-		}
-	}
-	
-	// Key not found
-	fclose(file)
-	return false;
-}
-
-public native_save_setting_float_arr(plugin_id, num_params)
-{
-	new filename[32]
-	get_string(1, filename, charsmax(filename))
-	
-	if (strlen(filename) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't save settings: empty filename")
-		return false;
-	}
-	
-	new setting_section[64], setting_key[64]
-	get_string(2, setting_section, charsmax(setting_section))
-	get_string(3, setting_key, charsmax(setting_key))
-	
-	if (strlen(setting_section) < 1 || strlen(setting_key) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't save settings: empty section/key")
-		return false;
-	}
-	
-	new Array:array_handle = Array:get_param(4)
-	
-	if (array_handle == Invalid_Array)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Array not initialized")
-		return false;
-	}
-	
-	// Build customization file path
-	new path[64]
-	get_configsdir(path, charsmax(path))
-	format(path, charsmax(path), "%s/%s", path, filename)
-	
-	// File not present
-	if (!file_exists(path))
-	{
-		// Create new file
-		write_file(path, "", -1)
-	}
-	
-	// Open customization file for reading
-	new file = fopen(path, "rt")
-	
-	// File can't be opened
-	if (!file)
-		return false;
-	
-	// Set up some vars to hold parsing info
-	new linedata[1024], section[64], line = -1
-	
-	// Seek to setting's section
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Increase line counter
-		line++
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// New section starting
-		if (linedata[0] == '[')
-		{
-			// Store section name without braces
-			copyc(section, charsmax(section), linedata[1], ']')
-			
-			// Is this our setting's section?
-			if (equal(section, setting_section))
-				break;
-		}
-	}
-	
-	// Section not found
-	if (!equal(section, setting_section))
-	{
-		// We're done with reading
-		fclose(file)
-		
-		// Format and add section
-		formatex(linedata, charsmax(linedata), "^n[%s]", setting_section)
-		write_file(path, linedata, -1)
-		
-		// Format key
-		formatex(linedata, charsmax(linedata), "%s =", setting_key)
-		
-		// Format values
-		new index
-		
-		// First value, append to linedata with no commas
-		format(linedata, charsmax(linedata), "%s %.2f", linedata, Float:ArrayGetCell(array_handle, index))
-		
-		// Successive values, append to linedata with commas (start on index = 1 to skip first value)
-		for (index = 1; index < ArraySize(array_handle); index++)
-			format(linedata, charsmax(linedata), "%s , %.2f", linedata, Float:ArrayGetCell(array_handle, index))
-		
-		// Add key + values
-		write_file(path, linedata, -1)
-		
-		return true;
-	}
-	
-	// Set up some vars to hold parsing info
-	new key[64], values[1024], txtlen
-	
-	// Seek to setting's key
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Increase line counter
-		line++
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// Blank line or comment
-		if (!linedata[0] || linedata[0] == ';') continue;
-		
-		// Section ended?
-		if (linedata[0] == '[')
-			break;
-		
-		// Get key and values
-		strtok(linedata, key, charsmax(key), values, charsmax(values), '=')
-		
-		// Trim spaces
-		trim(key)
-		trim(values)
-		
-		// Is this our setting's key?
-		if (equal(key, setting_key))
-			break;
-	}
-	
-	// We're done with reading
-	fclose(file)
-	
-	// Key not found
-	if (!equal(key, setting_key))
-	{
-		// Section ended?
-		if (linedata[0] == '[')
-			line -= 1
-		
-		// Read linedata
-		read_file(path, line, linedata, charsmax(linedata), txtlen)
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// Seek to end position of section (last key)
-		while (!linedata[0] || linedata[0] == ';')
-		{
-			// Move to previous line and read linedata
-			read_file(path, --line, linedata, charsmax(linedata), txtlen)
-			replace(linedata, charsmax(linedata), "^n", "")
-		}
-		
-		// Don't overwrite an already existing line
-		read_file(path, line, linedata, charsmax(linedata), txtlen)
-		format(linedata, charsmax(linedata), "%s^n", linedata)
-		write_file(path, linedata, line)
-		line++
-	}
-	
-	// Format key
-	formatex(linedata, charsmax(linedata), "%s =", setting_key)
-	
-	// Format values
-	new index
-	
-	// First value, append to linedata with no commas
-	format(linedata, charsmax(linedata), "%s %.2f", linedata, Float:ArrayGetCell(array_handle, index))
-	
-	// Successive values, append to linedata with commas (start on index = 1 to skip first value)
-	for (index = 1; index < ArraySize(array_handle); index++)
-		format(linedata, charsmax(linedata), "%s , %.2f", linedata, Float:ArrayGetCell(array_handle, index))
-	
-	// Add key + values
-	write_file(path, linedata, line)
-	
-	return true;
-}
-
-public native_load_setting_string(plugin_id, num_params)
-{
-	new filename[32]
-	get_string(1, filename, charsmax(filename))
-	
-	if (strlen(filename) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't load settings: empty filename")
-		return false;
-	}
-	
-	new setting_section[64], setting_key[64]
-	get_string(2, setting_section, charsmax(setting_section))
-	get_string(3, setting_key, charsmax(setting_key))
-	
-	if (strlen(setting_section) < 1 || strlen(setting_key) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't load settings: empty section/key")
-		return false;
-	}
-	
-	// Build customization file path
-	new path[64]
-	get_configsdir(path, charsmax(path))
-	format(path, charsmax(path), "%s/%s", path, filename)
-	
-	// File not present
-	if (!file_exists(path))
-		return false;
-	
-	// Open customization file for reading
-	new file = fopen(path, "rt")
-	
-	// File can't be opened
-	if (!file)
-		return false;
-	
-	// Set up some vars to hold parsing info
-	new linedata[1024], section[64]
-	
-	// Seek to setting's section
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// New section starting
-		if (linedata[0] == '[')
-		{
-			// Store section name without braces
-			copyc(section, charsmax(section), linedata[1], ']')
-			
-			// Is this our setting's section?
-			if (equal(section, setting_section))
-				break;
-		}
-	}
-	
-	// Section not found
-	if (!equal(section, setting_section))
-	{
-		fclose(file)
-		return false;
-	}
-	
-	// Set up some vars to hold parsing info
-	new key[64], current_value[128]
-	
-	// Seek to setting's key
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// Blank line or comment
-		if (!linedata[0] || linedata[0] == ';') continue;
-		
-		// Section ended?
-		if (linedata[0] == '[')
-			break;
-		
-		// Get key and value
-		strtok(linedata, key, charsmax(key), current_value, charsmax(current_value), '=')
-		
-		// Trim spaces
-		trim(key)
-		trim(current_value)
-		
-		// Is this our setting's key?
-		if (equal(key, setting_key))
-		{
-			// Return string by reference
-			new len = get_param(5)
-			set_string(4, current_value, len)
-			
-			// Values succesfully retrieved
-			fclose(file)
-			return true;
-		}
-	}
-	
-	// Key not found
-	fclose(file)
-	return false;
-}
-
-public native_save_setting_string(plugin_id, num_params)
-{
-	new filename[32]
-	get_string(1, filename, charsmax(filename))
-	
-	if (strlen(filename) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't save settings: empty filename")
-		return false;
-	}
-	
-	new setting_section[64], setting_key[64]
-	get_string(2, setting_section, charsmax(setting_section))
-	get_string(3, setting_key, charsmax(setting_key))
-	
-	if (strlen(setting_section) < 1 || strlen(setting_key) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't save settings: empty section/key")
-		return false;
-	}
-	
-	// Get string
-	new setting_string[128]
-	get_string(4, setting_string, charsmax(setting_string))
-	
-	// Build customization file path
-	new path[64]
-	get_configsdir(path, charsmax(path))
-	format(path, charsmax(path), "%s/%s", path, filename)
-	
-	// File not present
-	if (!file_exists(path))
-	{
-		// Create new file
-		write_file(path, "", -1)
-	}
-	
-	// Open customization file for reading
-	new file = fopen(path, "rt")
-	
-	// File can't be opened
-	if (!file)
-		return false;
-	
-	// Set up some vars to hold parsing info
-	new linedata[1024], section[64], line = -1
-	
-	// Seek to setting's section
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Increase line counter
-		line++
-		
-		new txtlen
-		read_file(path, line, linedata, charsmax(linedata), txtlen)
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// New section starting
-		if (linedata[0] == '[')
-		{
-			// Store section name without braces
-			copyc(section, charsmax(section), linedata[1], ']')
-			
-			// Is this our setting's section?
-			if (equal(section, setting_section))
-				break;
-		}
-	}
-	
-	// Section not found
-	if (!equal(section, setting_section))
-	{
-		// We're done with reading
-		fclose(file)
-		
-		// Format and add section
-		formatex(linedata, charsmax(linedata), "^n[%s]", setting_section)
-		write_file(path, linedata, -1)
-		
-		// Format key
-		formatex(linedata, charsmax(linedata), "%s =", setting_key)
-		
-		// Format value
-		format(linedata, charsmax(linedata), "%s %s", linedata, setting_string)
-		
-		// Add key + values
-		write_file(path, linedata, -1)
-		
-		return true;
-	}
-	
-	// Set up some vars to hold parsing info
-	new key[64], values[1024], txtlen
-	
-	// Seek to setting's key
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Increase line counter
-		line++
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// Blank line or comment
-		if (!linedata[0] || linedata[0] == ';') continue;
-		
-		// Section ended?
-		if (linedata[0] == '[')
-			break;
-		
-		// Get key and values
-		strtok(linedata, key, charsmax(key), values, charsmax(values), '=')
-		
-		// Trim spaces
-		trim(key)
-		trim(values)
-		
-		// Is this our setting's key?
-		if (equal(key, setting_key))
-			break;
-	}
-	
-	// We're done with reading
-	fclose(file)
-	
-	// Key not found
-	if (!equal(key, setting_key))
-	{
-		// Section ended?
-		if (linedata[0] == '[')
-			line -= 1
-		
-		// Read linedata
-		read_file(path, line, linedata, charsmax(linedata), txtlen)
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// Seek to end position of section (last key)
-		while (!linedata[0] || linedata[0] == ';')
-		{
-			// Move to previous line and read linedata
-			read_file(path, --line, linedata, charsmax(linedata), txtlen)
-			replace(linedata, charsmax(linedata), "^n", "")
-		}
-		
-		// Don't overwrite an already existing line
-		read_file(path, line, linedata, charsmax(linedata), txtlen)
-		format(linedata, charsmax(linedata), "%s^n", linedata)
-		write_file(path, linedata, line)
-		line++
-	}
-	
-	// Format key
-	formatex(linedata, charsmax(linedata), "%s =", setting_key)
-	
-	// Format value
-	format(linedata, charsmax(linedata), "%s %s", linedata, setting_string)
-	
-	// Add key + values
-	write_file(path, linedata, line)
-	
-	return true;
+	register_native("amx_save_setting_string", "native_save_setting_string")
+	register_native("amx_load_setting_int_arr", "native_load_setting_int_arr")
+	register_native("amx_load_setting_float_arr", "native_load_setting_float_arr")
+	register_native("amx_load_setting_string_arr", "native_load_setting_string_arr")
+	register_native("amx_save_setting_int_arr", "native_save_setting_int_arr")
+	register_native("amx_save_setting_float_arr", "native_save_setting_float_arr")
+	register_native("amx_save_setting_string_arr", "native_save_setting_string_arr")
 }
 
 public native_load_setting_int(plugin_id, num_params)
 {
-	new filename[32]
-	get_string(1, filename, charsmax(filename))
-	
-	if (strlen(filename) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't load settings: empty filename")
-		return false;
-	}
-	
-	new setting_section[64], setting_key[64]
-	get_string(2, setting_section, charsmax(setting_section))
-	get_string(3, setting_key, charsmax(setting_key))
-	
-	if (strlen(setting_section) < 1 || strlen(setting_key) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't load settings: empty section/key")
-		return false;
-	}
-	
-	// Build customization file path
-	new path[64]
-	get_configsdir(path, charsmax(path))
-	format(path, charsmax(path), "%s/%s", path, filename)
-	
-	// File not present
-	if (!file_exists(path))
+	// Retrieve and check params
+	new filename[32], setting_section[64], setting_key[64]
+	if (!RetrieveParams(filename, charsmax(filename), setting_section, charsmax(setting_section), setting_key, charsmax(setting_key)))
 		return false;
 	
-	// Open customization file for reading
-	new file = fopen(path, "rt")
-	
-	// File can't be opened
-	if (!file)
+	// Open file for read
+	new path[64], file
+	if (!OpenCustomFileRead(path, charsmax(path), filename, file))
 		return false;
 	
-	// Set up some vars to hold parsing info
-	new linedata[1024], section[64]
-	
-	// Seek to setting's section
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// New section starting
-		if (linedata[0] == '[')
-		{
-			// Store section name without braces
-			copyc(section, charsmax(section), linedata[1], ']')
-			
-			// Is this our setting's section?
-			if (equal(section, setting_section))
-				break;
-		}
-	}
-	
-	// Section not found
-	if (!equal(section, setting_section))
+	// Try to find section
+	if (!SectionExists(file, setting_section))
 	{
 		fclose(file)
 		return false;
 	}
 	
-	// Set up some vars to hold parsing info
-	new key[64], current_value[32]
-	
-	// Seek to setting's key
-	while (!feof(file))
+	// Try to find key in section
+	new keypos_start, keypos_end
+	if (KeyExists(file, setting_key, keypos_start, keypos_end))
 	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
+		// Return int by reference
+		new value[16]
+		SeekReturnValues(file, keypos_start, value, charsmax(value))
+		set_param_byref(4, str_to_num(value))
 		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
+		// Value succesfully retrieved
+		fclose(file)
+		return true;
+	}
+	
+	// Key not found
+	fclose(file)
+	return false;
+}
+
+public native_load_setting_float(plugin_id, num_params)
+{
+	// Retrieve and check params
+	new filename[32], setting_section[64], setting_key[64]
+	if (!RetrieveParams(filename, charsmax(filename), setting_section, charsmax(setting_section), setting_key, charsmax(setting_key)))
+		return false;
+	
+	// Open file for read
+	new path[64], file
+	if (!OpenCustomFileRead(path, charsmax(path), filename, file))
+		return false;
+	
+	// Try to find section
+	if (!SectionExists(file, setting_section))
+	{
+		fclose(file)
+		return false;
+	}
+	
+	// Try to find key in section
+	new keypos_start, keypos_end
+	if (KeyExists(file, setting_key, keypos_start, keypos_end))
+	{
+		// Return float by reference
+		new value[16]
+		SeekReturnValues(file, keypos_start, value, charsmax(value))
+		set_float_byref(4, str_to_float(value))	
 		
-		// Blank line or comment
-		if (!linedata[0] || linedata[0] == ';') continue;
+		// Value succesfully retrieved
+		fclose(file)
+		return true;
+	}
+	
+	// Key not found
+	fclose(file)
+	return false;
+}
+public native_load_setting_string(plugin_id, num_params)
+{
+	// Retrieve and check params
+	new filename[32], setting_section[64], setting_key[64]
+	if (!RetrieveParams(filename, charsmax(filename), setting_section, charsmax(setting_section), setting_key, charsmax(setting_key)))
+		return false;
+	
+	// Open file for read
+	new path[64], file
+	if (!OpenCustomFileRead(path, charsmax(path), filename, file))
+		return false;
+	
+	// Try to find section
+	if (!SectionExists(file, setting_section))
+	{
+		fclose(file)
+		return false;
+	}
+	
+	// Try to find key in section
+	new keypos_start, keypos_end
+	if (KeyExists(file, setting_key, keypos_start, keypos_end))
+	{
+		// Return string by reference
+		new value[128]
+		SeekReturnValues(file, keypos_start, value, charsmax(value))
+		set_string(4, value, get_param(5))
 		
-		// Section ended?
-		if (linedata[0] == '[')
-			break;
-		
-		// Get key and value
-		strtok(linedata, key, charsmax(key), current_value, charsmax(current_value), '=')
-		
-		// Trim spaces
-		trim(key)
-		trim(current_value)
-		
-		// Is this our setting's key?
-		if (equal(key, setting_key))
-		{
-			// Return int by reference
-			set_param_byref(4, str_to_num(current_value))
-			
-			// Values succesfully retrieved
-			fclose(file)
-			return true;
-		}
+		// Value succesfully retrieved
+		fclose(file)
+		return true;
 	}
 	
 	// Key not found
@@ -1381,275 +149,237 @@ public native_load_setting_int(plugin_id, num_params)
 
 public native_save_setting_int(plugin_id, num_params)
 {
-	new filename[32]
-	get_string(1, filename, charsmax(filename))
-	
-	if (strlen(filename) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't save settings: empty filename")
+	// Retrieve and check params
+	new filename[32], setting_section[64], setting_key[64]
+	if (!RetrieveParams(filename, charsmax(filename), setting_section, charsmax(setting_section), setting_key, charsmax(setting_key)))
 		return false;
-	}
-	
-	new setting_section[64], setting_key[64]
-	get_string(2, setting_section, charsmax(setting_section))
-	get_string(3, setting_key, charsmax(setting_key))
-	
-	if (strlen(setting_section) < 1 || strlen(setting_key) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't save settings: empty section/key")
-		return false;
-	}
 	
 	// Get int
-	new integer_value = get_param(4)
+	new value = get_param(4)
 	
-	// Build customization file path
-	new path[64]
-	get_configsdir(path, charsmax(path))
-	format(path, charsmax(path), "%s/%s", path, filename)
-	
-	// File not present
-	if (!file_exists(path))
-	{
-		// Create new file
-		write_file(path, "", -1)
-	}
-	
-	// Open customization file for reading
-	new file = fopen(path, "rt")
-	
-	// File can't be opened
-	if (!file)
+	// Open file for read
+	new path[64], file
+	if (!OpenCustomFileRead(path, charsmax(path), filename, file, true))
 		return false;
 	
-	// Set up some vars to hold parsing info
-	new linedata[1024], section[64], line = -1
-	
-	// Seek to setting's section
-	while (!feof(file))
+	// Try to find section
+	if (!SectionExists(file, setting_section))
 	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Increase line counter
-		line++
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// New section starting
-		if (linedata[0] == '[')
-		{
-			// Store section name without braces
-			copyc(section, charsmax(section), linedata[1], ']')
-			
-			// Is this our setting's section?
-			if (equal(section, setting_section))
-				break;
-		}
-	}
-	
-	// Section not found
-	if (!equal(section, setting_section))
-	{
-		// We're done with reading
+		// Section not found, append at the end
+		if (!CustomFileAppend(file, path)) return false;
+		CopySection(file, setting_section)
+		CopyKeyValueInt(file, setting_key, value)
 		fclose(file)
-		
-		// Format and add section
-		formatex(linedata, charsmax(linedata), "^n[%s]", setting_section)
-		write_file(path, linedata, -1)
-		
-		// Format key
-		formatex(linedata, charsmax(linedata), "%s =", setting_key)
-		
-		// Format value
-		format(linedata, charsmax(linedata), "%s %d", linedata, integer_value)
-		
-		// Add key + values
-		write_file(path, linedata, -1)
-		
 		return true;
 	}
 	
-	// Set up some vars to hold parsing info
-	new key[64], values[1024], txtlen
-	
-	// Seek to setting's key
-	while (!feof(file))
+	// Try to find key in section
+	new keypos_start, keypos_end, replace_values = true
+	if (!KeyExists(file, setting_key, keypos_start, keypos_end))
 	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Increase line counter
-		line++
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// Blank line or comment
-		if (!linedata[0] || linedata[0] == ';') continue;
-		
-		// Section ended?
-		if (linedata[0] == '[')
-			break;
-		
-		// Get key and values
-		strtok(linedata, key, charsmax(key), values, charsmax(values), '=')
-		
-		// Trim spaces
-		trim(key)
-		trim(values)
-		
-		// Is this our setting's key?
-		if (equal(key, setting_key))
-			break;
-	}
-	
-	// We're done with reading
-	fclose(file)
-	
-	// Key not found
-	if (!equal(key, setting_key))
-	{
-		// Section ended?
-		if (linedata[0] == '[')
-			line -= 1
-		
-		// Read linedata
-		read_file(path, line, linedata, charsmax(linedata), txtlen)
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// Seek to end position of section (last key)
-		while (!linedata[0] || linedata[0] == ';')
+		if (feof(file))
 		{
-			// Move to previous line and read linedata
-			read_file(path, --line, linedata, charsmax(linedata), txtlen)
-			replace(linedata, charsmax(linedata), "^n", "")
+			// End of file, append at the end
+			if (!CustomFileAppend(file, path)) return false;
+			CopyKeyValueInt(file, setting_key, value)
+			fclose(file)
+			return true;
 		}
 		
-		// Don't overwrite an already existing line
-		read_file(path, line, linedata, charsmax(linedata), txtlen)
-		format(linedata, charsmax(linedata), "%s^n", linedata)
-		write_file(path, linedata, line)
-		line++
+		// End of section, add new key + value pair at the end
+		replace_values = false
 	}
 	
-	// Format key
-	formatex(linedata, charsmax(linedata), "%s =", setting_key)
+	// We have to use a second file (tempfile) to add data at an arbitrary position
+	new temppath[64], tempfile
+	if (!OpenTempFileWrite(temppath, charsmax(temppath), tempfile))
+	{
+		fclose(file)
+		return false;
+	}
 	
-	// Format value
-	format(linedata, charsmax(linedata), "%s %d", linedata, integer_value)
+	// Copy new data into temp file
+	CopyDataBeforeKey(file, tempfile, keypos_start, keypos_end, replace_values)
+	CopyKeyValueInt(tempfile, setting_key, value)
+	CopyDataAfterKey(file, tempfile)
 	
-	// Add key + values
-	write_file(path, linedata, line)
+	// Replace original with new
+	if (!ReplaceFile(file, path, tempfile, temppath))
+	{
+		fclose(tempfile)
+		return false;
+	}
 	
 	return true;
 }
 
-public native_load_setting_float(plugin_id, num_params)
+public native_save_setting_float(plugin_id, num_params)
 {
-	new filename[32]
-	get_string(1, filename, charsmax(filename))
-	
-	if (strlen(filename) < 1)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't load settings: empty filename")
+	// Retrieve and check params
+	new filename[32], setting_section[64], setting_key[64]
+	if (!RetrieveParams(filename, charsmax(filename), setting_section, charsmax(setting_section), setting_key, charsmax(setting_key)))
 		return false;
+	
+	// Get float
+	new Float:value = get_param_f(4)
+	
+	// Open file for read
+	new path[64], file
+	if (!OpenCustomFileRead(path, charsmax(path), filename, file, true))
+		return false;
+	
+	// Try to find section
+	if (!SectionExists(file, setting_section))
+	{
+		// Section not found, append at the end
+		if (!CustomFileAppend(file, path)) return false;
+		CopySection(file, setting_section)
+		CopyKeyValueFloat(file, setting_key, value)
+		fclose(file)
+		return true;
 	}
 	
-	new setting_section[64], setting_key[64]
-	get_string(2, setting_section, charsmax(setting_section))
-	get_string(3, setting_key, charsmax(setting_key))
-	
-	if (strlen(setting_section) < 1 || strlen(setting_key) < 1)
+	// Try to find key in section
+	new keypos_start, keypos_end, replace_values = true
+	if (!KeyExists(file, setting_key, keypos_start, keypos_end))
 	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't load settings: empty section/key")
-		return false;
-	}
-	
-	// Build customization file path
-	new path[64]
-	get_configsdir(path, charsmax(path))
-	format(path, charsmax(path), "%s/%s", path, filename)
-	
-	// File not present
-	if (!file_exists(path))
-		return false;
-	
-	// Open customization file for reading
-	new file = fopen(path, "rt")
-	
-	// File can't be opened
-	if (!file)
-		return false;
-	
-	// Set up some vars to hold parsing info
-	new linedata[1024], section[64]
-	
-	// Seek to setting's section
-	while (!feof(file))
-	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// New section starting
-		if (linedata[0] == '[')
+		if (feof(file))
 		{
-			// Store section name without braces
-			copyc(section, charsmax(section), linedata[1], ']')
-			
-			// Is this our setting's section?
-			if (equal(section, setting_section))
-				break;
+			// End of file, append at the end
+			if (!CustomFileAppend(file, path)) return false;
+			CopyKeyValueFloat(file, setting_key, value)
+			fclose(file)
+			return true;
 		}
+		
+		// End of section, add new key + value pair at the end
+		replace_values = false
 	}
 	
-	// Section not found
-	if (!equal(section, setting_section))
+	// We have to use a second file (tempfile) to add data at an arbitrary position
+	new temppath[64], tempfile
+	if (!OpenTempFileWrite(temppath, charsmax(temppath), tempfile))
 	{
 		fclose(file)
 		return false;
 	}
 	
-	// Set up some vars to hold parsing info
-	new key[64], current_value[32]
+	// Copy new data into temp file
+	CopyDataBeforeKey(file, tempfile, keypos_start, keypos_end, replace_values)
+	CopyKeyValueFloat(tempfile, setting_key, value)
+	CopyDataAfterKey(file, tempfile)
 	
-	// Seek to setting's key
-	while (!feof(file))
+	// Replace original with new
+	if (!ReplaceFile(file, path, tempfile, temppath))
 	{
-		// Read one line at a time
-		fgets(file, linedata, charsmax(linedata))
-		
-		// Replace newlines with a null character to prevent headaches
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// Blank line or comment
-		if (!linedata[0] || linedata[0] == ';') continue;
-		
-		// Section ended?
-		if (linedata[0] == '[')
-			break;
-		
-		// Get key and value
-		strtok(linedata, key, charsmax(key), current_value, charsmax(current_value), '=')
-		
-		// Trim spaces
-		trim(key)
-		trim(current_value)
-		
-		// Is this our setting's key?
-		if (equal(key, setting_key))
+		fclose(tempfile)
+		return false;
+	}
+	
+	return true;
+}
+public native_save_setting_string(plugin_id, num_params)
+{
+	// Retrieve and check params
+	new filename[32], setting_section[64], setting_key[64]
+	if (!RetrieveParams(filename, charsmax(filename), setting_section, charsmax(setting_section), setting_key, charsmax(setting_key)))
+		return false;
+	
+	// Get string
+	new string[128]
+	get_string(4, string, charsmax(string))
+	
+	// Open file for read
+	new path[64], file
+	if (!OpenCustomFileRead(path, charsmax(path), filename, file, true))
+		return false;
+	
+	// Try to find section
+	if (!SectionExists(file, setting_section))
+	{
+		// Section not found, append at the end
+		if (!CustomFileAppend(file, path)) return false;
+		CopySection(file, setting_section)
+		CopyKeyValueString(file, setting_key, string)
+		fclose(file)
+		return true;
+	}
+	
+	// Try to find key in section
+	new keypos_start, keypos_end, replace_values = true
+	if (!KeyExists(file, setting_key, keypos_start, keypos_end))
+	{
+		if (feof(file))
 		{
-			// Return float by reference
-			set_float_byref(4, str_to_float(current_value))
-			
-			// Values succesfully retrieved
+			// End of file, append at the end
+			if (!CustomFileAppend(file, path)) return false;
+			CopyKeyValueString(file, setting_key, string)
 			fclose(file)
 			return true;
 		}
+		
+		// End of section, add new key + value pair at the end
+		replace_values = false
+	}
+	
+	// We have to use a second file (tempfile) to add data at an arbitrary position
+	new temppath[64], tempfile
+	if (!OpenTempFileWrite(temppath, charsmax(temppath), tempfile))
+	{
+		fclose(file)
+		return false;
+	}
+	
+	// Copy new data into temp file
+	CopyDataBeforeKey(file, tempfile, keypos_start, keypos_end, replace_values)
+	CopyKeyValueString(tempfile, setting_key, string)
+	CopyDataAfterKey(file, tempfile)
+	
+	// Replace original with new
+	if (!ReplaceFile(file, path, tempfile, temppath))
+	{
+		fclose(tempfile)
+		return false;
+	}
+	
+	return true;
+}
+
+public native_load_setting_int_arr(plugin_id, num_params)
+{
+	// Retrieve and check params
+	new filename[32], setting_section[64], setting_key[64]
+	if (!RetrieveParams(filename, charsmax(filename), setting_section, charsmax(setting_section), setting_key, charsmax(setting_key)))
+		return false;
+	
+	new Array:array_handle
+	if (!RetrieveArray(array_handle))
+		return false;
+	
+	// Open file for read
+	new path[64], file
+	if (!OpenCustomFileRead(path, charsmax(path), filename, file))
+		return false;
+	
+	// Try to find section
+	if (!SectionExists(file, setting_section))
+	{
+		fclose(file)
+		return false;
+	}
+	
+	// Try to find key in section
+	new keypos_start, keypos_end
+	if (KeyExists(file, setting_key, keypos_start, keypos_end))
+	{
+		// Return array
+		new values[1024]
+		SeekReturnValues(file, keypos_start, values, charsmax(values))
+		ParseValuesArrayInt(values, charsmax(values), array_handle)
+		
+		// Values succesfully retrieved
+		fclose(file)
+		return true;
 	}
 	
 	// Key not found
@@ -1657,62 +387,395 @@ public native_load_setting_float(plugin_id, num_params)
 	return false;
 }
 
-public native_save_setting_float(plugin_id, num_params)
+public native_load_setting_float_arr(plugin_id, num_params)
 {
-	new filename[32]
-	get_string(1, filename, charsmax(filename))
+	// Retrieve and check params
+	new filename[32], setting_section[64], setting_key[64]
+	if (!RetrieveParams(filename, charsmax(filename), setting_section, charsmax(setting_section), setting_key, charsmax(setting_key)))
+		return false;
 	
+	new Array:array_handle
+	if (!RetrieveArray(array_handle))
+		return false;
+	
+	// Open file for read
+	new path[64], file
+	if (!OpenCustomFileRead(path, charsmax(path), filename, file))
+		return false;
+	
+	// Try to find section
+	if (!SectionExists(file, setting_section))
+	{
+		fclose(file)
+		return false;
+	}
+	
+	// Try to find key in section
+	new keypos_start, keypos_end
+	if (KeyExists(file, setting_key, keypos_start, keypos_end))
+	{
+		// Return array
+		new values[1024]
+		SeekReturnValues(file, keypos_start, values, charsmax(values))
+		ParseValuesArrayFloat(values, charsmax(values), array_handle)
+		
+		// Values succesfully retrieved
+		fclose(file)
+		return true;
+	}
+	
+	// Key not found
+	fclose(file)
+	return false;
+}
+
+public native_load_setting_string_arr(plugin_id, num_params)
+{
+	// Retrieve and check params
+	new filename[32], setting_section[64], setting_key[64]
+	if (!RetrieveParams(filename, charsmax(filename), setting_section, charsmax(setting_section), setting_key, charsmax(setting_key)))
+		return false;
+	
+	new Array:array_handle
+	if (!RetrieveArray(array_handle))
+		return false;
+	
+	// Open file for read
+	new path[64], file
+	if (!OpenCustomFileRead(path, charsmax(path), filename, file))
+		return false;
+	
+	// Try to find section
+	if (!SectionExists(file, setting_section))
+	{
+		fclose(file)
+		return false;
+	}
+	
+	// Try to find key in section
+	new keypos_start, keypos_end
+	if (KeyExists(file, setting_key, keypos_start, keypos_end))
+	{
+		// Return array
+		new values[1024]
+		SeekReturnValues(file, keypos_start, values, charsmax(values))
+		ParseValuesArrayString(values, charsmax(values), array_handle)
+		
+		// Values succesfully retrieved
+		fclose(file)
+		return true;
+	}
+	
+	// Key not found
+	fclose(file)
+	return false;
+}
+
+public native_save_setting_int_arr(plugin_id, num_params)
+{
+	// Retrieve and check params
+	new filename[32], setting_section[64], setting_key[64]
+	if (!RetrieveParams(filename, charsmax(filename), setting_section, charsmax(setting_section), setting_key, charsmax(setting_key)))
+		return false;
+	
+	new Array:array_handle
+	if (!RetrieveArray(array_handle))
+		return false;
+	
+	// Open file for read
+	new path[64], file
+	if (!OpenCustomFileRead(path, charsmax(path), filename, file, true))
+		return false;
+	
+	// Try to find section
+	if (!SectionExists(file, setting_section))
+	{
+		// Section not found, append at the end
+		if (!CustomFileAppend(file, path)) return false;
+		CopySection(file, setting_section)
+		CopyKeyValueArrayInt(file, setting_key, array_handle)
+		fclose(file)
+		return true;
+	}
+	
+	// Try to find key in section
+	new keypos_start, keypos_end, replace_values = true
+	if (!KeyExists(file, setting_key, keypos_start, keypos_end))
+	{
+		if (feof(file))
+		{
+			// End of file, append at the end
+			if (!CustomFileAppend(file, path)) return false;
+			CopyKeyValueArrayInt(file, setting_key, array_handle)
+			fclose(file)
+			return true;
+		}
+		
+		// End of section, add new key + value pair at the end
+		replace_values = false
+	}
+	
+	// We have to use a second file (tempfile) to add data at an arbitrary position
+	new temppath[64], tempfile
+	if (!OpenTempFileWrite(temppath, charsmax(temppath), tempfile))
+	{
+		fclose(file)
+		return false;
+	}
+	
+	// Copy new data into temp file
+	CopyDataBeforeKey(file, tempfile, keypos_start, keypos_end, replace_values)
+	CopyKeyValueArrayInt(tempfile, setting_key, array_handle)
+	CopyDataAfterKey(file, tempfile)
+	
+	// Replace original with new
+	if (!ReplaceFile(file, path, tempfile, temppath))
+	{
+		fclose(tempfile)
+		return false;
+	}
+	
+	return true;
+}
+
+public native_save_setting_float_arr(plugin_id, num_params)
+{
+	// Retrieve and check params
+	new filename[32], setting_section[64], setting_key[64]
+	if (!RetrieveParams(filename, charsmax(filename), setting_section, charsmax(setting_section), setting_key, charsmax(setting_key)))
+		return false;
+	
+	new Array:array_handle
+	if (!RetrieveArray(array_handle))
+		return false;
+	
+	// Open file for read
+	new path[64], file
+	if (!OpenCustomFileRead(path, charsmax(path), filename, file, true))
+		return false;
+	
+	// Try to find section
+	if (!SectionExists(file, setting_section))
+	{
+		// Section not found, append at the end
+		if (!CustomFileAppend(file, path)) return false;
+		CopySection(file, setting_section)
+		CopyKeyValueArrayFloat(file, setting_key, array_handle)
+		fclose(file)
+		return true;
+	}
+	
+	// Try to find key in section
+	new keypos_start, keypos_end, replace_values = true
+	if (!KeyExists(file, setting_key, keypos_start, keypos_end))
+	{
+		if (feof(file))
+		{
+			// End of file, append at the end
+			if (!CustomFileAppend(file, path)) return false;
+			CopyKeyValueArrayFloat(file, setting_key, array_handle)
+			fclose(file)
+			return true;
+		}
+		
+		// End of section, add new key + value pair at the end
+		replace_values = false
+	}
+	
+	// We have to use a second file (tempfile) to add data at an arbitrary position
+	new temppath[64], tempfile
+	if (!OpenTempFileWrite(temppath, charsmax(temppath), tempfile))
+	{
+		fclose(file)
+		return false;
+	}
+	
+	// Copy new data into temp file
+	CopyDataBeforeKey(file, tempfile, keypos_start, keypos_end, replace_values)
+	CopyKeyValueArrayFloat(tempfile, setting_key, array_handle)
+	CopyDataAfterKey(file, tempfile)
+	
+	// Replace original with new
+	if (!ReplaceFile(file, path, tempfile, temppath))
+	{
+		fclose(tempfile)
+		return false;
+	}
+	
+	return true;
+}
+
+public native_save_setting_string_arr(plugin_id, num_params)
+{
+	// Retrieve and check params
+	new filename[32], setting_section[64], setting_key[64]
+	if (!RetrieveParams(filename, charsmax(filename), setting_section, charsmax(setting_section), setting_key, charsmax(setting_key)))
+		return false;
+	
+	new Array:array_handle
+	if (!RetrieveArray(array_handle))
+		return false;
+	
+	// Open file for read
+	new path[64], file
+	if (!OpenCustomFileRead(path, charsmax(path), filename, file, true))
+		return false;
+	
+	// Try to find section
+	if (!SectionExists(file, setting_section))
+	{
+		// Section not found, append at the end
+		if (!CustomFileAppend(file, path)) return false;
+		CopySection(file, setting_section)
+		CopyKeyValueArrayString(file, setting_key, array_handle)
+		fclose(file)
+		return true;
+	}
+	
+	// Try to find key in section
+	new keypos_start, keypos_end, replace_values = true
+	if (!KeyExists(file, setting_key, keypos_start, keypos_end))
+	{
+		if (feof(file))
+		{
+			// End of file, append at the end
+			if (!CustomFileAppend(file, path)) return false;
+			CopyKeyValueArrayString(file, setting_key, array_handle)
+			fclose(file)
+			return true;
+		}
+		
+		// End of section, add new key + value pair at the end
+		replace_values = false
+	}
+	
+	// We have to use a second file (tempfile) to add data at an arbitrary position
+	new temppath[64], tempfile
+	if (!OpenTempFileWrite(temppath, charsmax(temppath), tempfile))
+	{
+		fclose(file)
+		return false;
+	}
+	
+	// Copy new data into temp file
+	CopyDataBeforeKey(file, tempfile, keypos_start, keypos_end, replace_values)
+	CopyKeyValueArrayString(tempfile, setting_key, array_handle)
+	CopyDataAfterKey(file, tempfile)
+	
+	// Replace original with new
+	if (!ReplaceFile(file, path, tempfile, temppath))
+	{
+		fclose(tempfile)
+		return false;
+	}
+	
+	return true;
+}
+
+RetrieveParams(filename[], len1, setting_section[], len2, setting_key[], len3)
+{
+	// Filename
+	get_string(1, filename, len1)
 	if (strlen(filename) < 1)
 	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't save settings: empty filename")
+		log_error(AMX_ERR_NATIVE, "[AMXX] Can't save settings: empty filename.")
 		return false;
 	}
 	
-	new setting_section[64], setting_key[64]
-	get_string(2, setting_section, charsmax(setting_section))
-	get_string(3, setting_key, charsmax(setting_key))
-	
+	// Section + Key
+	get_string(2, setting_section, len2)
+	get_string(3, setting_key, len3)
 	if (strlen(setting_section) < 1 || strlen(setting_key) < 1)
 	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Can't save settings: empty section/key")
+		log_error(AMX_ERR_NATIVE, "[AMXX] Can't save settings: empty section/key.")
 		return false;
 	}
 	
-	// Get int
-	new Float:float_value = get_param_f(4)
+	return true;
+}
+
+RetrieveArray(&Array:array_handle)
+{
+	// Array handle
+	array_handle = Array:get_param(4)
+	if (array_handle == Invalid_Array)
+	{
+		log_error(AMX_ERR_NATIVE, "[AMXX] Array not initialized.")
+		return false;
+	}
 	
+	return true;
+}
+
+OpenCustomFileRead(path[], len1, filename[], &file, create = false)
+{	
 	// Build customization file path
-	new path[64]
-	get_configsdir(path, charsmax(path))
-	format(path, charsmax(path), "%s/%s", path, filename)
+	get_configsdir(path, len1)
+	format(path, len1, "%s/%s", path, filename)
 	
-	// File not present
+	// File not present, create new file?
 	if (!file_exists(path))
 	{
-		// Create new file
-		write_file(path, "", -1)
+		if (create)
+			write_file(path, "", -1)
+		else
+			return false;
 	}
 	
 	// Open customization file for reading
-	new file = fopen(path, "rt")
-	
-	// File can't be opened
+	file = fopen(path, "rt")
 	if (!file)
+	{
+		// File couldn't be read
+		log_error(AMX_ERR_NATIVE, "[AMXX] Can't read file (%s).", path)
 		return false;
+	}
 	
-	// Set up some vars to hold parsing info
-	new linedata[1024], section[64], line = -1
+	return true;
+}
+
+CustomFileAppend(&file, path[])
+{
+	fclose(file)
+	file = fopen(path, "at")
+	if (!file)
+	{
+		// File couldn't be accessed
+		log_error(AMX_ERR_NATIVE, "[AMXX] Can't write file (%s).", path)
+		return false;
+	}
 	
+	return true;
+}
+
+OpenTempFileWrite(temppath[], len1, &tempfile)
+{
+	// Build temp file path
+	get_configsdir(temppath, len1)
+	format(temppath, len1, "%s/tempfile.txt", temppath)
+	
+	// Open temp file for writing+reading (creates a blank file)
+	tempfile = fopen(temppath, "wt+")
+	if (!tempfile)
+	{
+		// File couldn't be created
+		log_error(AMX_ERR_NATIVE, "[AMXX] Can't write file (%s).", temppath)
+		return false;
+	}
+	
+	return true;
+}
+
+SectionExists(file, setting_section[])
+{
 	// Seek to setting's section
+	new linedata[1024], section[64]	
 	while (!feof(file))
 	{
 		// Read one line at a time
 		fgets(file, linedata, charsmax(linedata))
 		
-		// Increase line counter
-		line++
-		
-		// Replace newlines with a null character to prevent headaches
+		// Replace newlines with a null character
 		replace(linedata, charsmax(linedata), "^n", "")
 		
 		// New section starting
@@ -1723,45 +786,24 @@ public native_save_setting_float(plugin_id, num_params)
 			
 			// Is this our setting's section?
 			if (equal(section, setting_section))
-				break;
+				return true;
 		}
 	}
 	
-	// Section not found
-	if (!equal(section, setting_section))
-	{
-		// We're done with reading
-		fclose(file)
-		
-		// Format and add section
-		formatex(linedata, charsmax(linedata), "^n[%s]", setting_section)
-		write_file(path, linedata, -1)
-		
-		// Format key
-		formatex(linedata, charsmax(linedata), "%s =", setting_key)
-		
-		// Format value
-		format(linedata, charsmax(linedata), "%s %.2f", linedata, float_value)
-		
-		// Add key + values
-		write_file(path, linedata, -1)
-		
-		return true;
-	}
-	
-	// Set up some vars to hold parsing info
-	new key[64], values[1024], txtlen
-	
+	return false;
+}
+
+KeyExists(file, setting_key[], &keypos_start, &keypos_end)
+{
 	// Seek to setting's key
+	new linedata[1024], key[64]
 	while (!feof(file))
 	{
 		// Read one line at a time
+		keypos_start = ftell(file)
 		fgets(file, linedata, charsmax(linedata))
 		
-		// Increase line counter
-		line++
-		
-		// Replace newlines with a null character to prevent headaches
+		// Replace newlines with a null character
 		replace(linedata, charsmax(linedata), "^n", "")
 		
 		// Blank line or comment
@@ -1771,55 +813,266 @@ public native_save_setting_float(plugin_id, num_params)
 		if (linedata[0] == '[')
 			break;
 		
-		// Get key and values
-		strtok(linedata, key, charsmax(key), values, charsmax(values), '=')
-		
-		// Trim spaces
+		// Get key
+		keypos_end = ftell(file)
+		copyc(key, charsmax(key), linedata, '=')
 		trim(key)
-		trim(values)
 		
 		// Is this our setting's key?
 		if (equal(key, setting_key))
-			break;
+			return true;
 	}
 	
-	// We're done with reading
-	fclose(file)
-	
-	// Key not found
-	if (!equal(key, setting_key))
+	return false;
+}
+
+CopyDataBeforeKey(file, tempfile, keypos_start, keypos_end, replace_values)
+{
+	new linedata[1024]
+	if (!replace_values)
 	{
-		// Section ended?
-		if (linedata[0] == '[')
-			line -= 1
-		
-		// Read linedata
-		read_file(path, line, linedata, charsmax(linedata), txtlen)
-		replace(linedata, charsmax(linedata), "^n", "")
-		
-		// Seek to end position of section (last key)
-		while (!linedata[0] || linedata[0] == ';')
+		// Copy original data from beginning up to keypos_end (pos after reading last valid key)
+		fseek(file, 0, SEEK_SET)
+		while(ftell(file) < keypos_end)
 		{
-			// Move to previous line and read linedata
-			read_file(path, --line, linedata, charsmax(linedata), txtlen)
-			replace(linedata, charsmax(linedata), "^n", "")
+			fgets(file, linedata, charsmax(linedata))
+			fputs(tempfile, linedata)
+		}
+	}
+	else
+	{
+		// Copy original data from beginning up to keypos_start (pos before reading key)
+		fseek(file, 0, SEEK_SET)
+		while(ftell(file) < keypos_start)
+		{
+			fgets(file, linedata, charsmax(linedata))
+			fputs(tempfile, linedata)
 		}
 		
-		// Don't overwrite an already existing line
-		read_file(path, line, linedata, charsmax(linedata), txtlen)
-		format(linedata, charsmax(linedata), "%s^n", linedata)
-		write_file(path, linedata, line)
-		line++
+		// Move read cursor past the line we are replacing
+		fgets(file, linedata, charsmax(linedata))
+	}
+}
+
+CopyDataAfterKey(file, tempfile)
+{
+	// Copy remaining data until the end
+	new linedata[1024]
+	while (!feof(file))
+	{
+		fgets(file, linedata, charsmax(linedata))
+		fputs(tempfile, linedata)
+	}
+}
+
+ReplaceFile(&file, path[], tempfile, temppath[])
+{
+	// Replace file with temp
+	fclose(file)
+	file = fopen(path, "wt")
+	if (!file)
+	{
+		// File couldn't be created
+		log_error(AMX_ERR_NATIVE, "[AMXX] Can't write file (%s).", path)
+		return false;
 	}
 	
-	// Format key
-	formatex(linedata, charsmax(linedata), "%s =", setting_key)
+	// Copy all data
+	new linedata[1024]
+	fseek(tempfile, 0, SEEK_SET)
+	while (!feof(tempfile))
+	{
+		fgets(tempfile, linedata, charsmax(linedata))
+		fputs(file, linedata)
+	}
 	
-	// Format value
-	format(linedata, charsmax(linedata), "%s %.2f", linedata, float_value)
-	
-	// Add key + values
-	write_file(path, linedata, line)
-	
+	// Close files and delete temp file
+	fclose(file)
+	fclose(tempfile)
+	delete_file(temppath)
 	return true;
+}
+
+CopySection(file, setting_section[])
+{
+	// Copy section header
+	new linedata[96]
+	formatex(linedata, charsmax(linedata), "^n[%s]", setting_section)
+	fputs(file, linedata)
+	fputc(file, '^n')
+}
+
+CopyKeyValueInt(file, setting_key[], value)
+{
+	// Copy new data (key + values) into file
+	new linedata[96]
+	FormatKeyValueInt(linedata, charsmax(linedata), setting_key, value)
+	fputs(file, linedata)
+	fputc(file, '^n')
+}
+
+FormatKeyValueInt(linedata[], len1, setting_key[], value)
+{
+	formatex(linedata, len1, "%s = %d", setting_key, value)
+}
+
+CopyKeyValueFloat(file, setting_key[], Float:value)
+{
+	// Copy new data (key + values) into file
+	new linedata[96]
+	FormatKeyValueFloat(linedata, charsmax(linedata), setting_key, value)
+	fputs(file, linedata)
+	fputc(file, '^n')
+}
+
+FormatKeyValueFloat(linedata[], len1, setting_key[], Float:value)
+{
+	formatex(linedata, len1, "%s = %.2f", setting_key, value)
+}
+
+CopyKeyValueString(file, setting_key[], string[])
+{
+	// Copy new data (key + values) into file
+	new linedata[256]
+	FormatKeyValueString(linedata, charsmax(linedata), setting_key, string)
+	fputs(file, linedata)
+	fputc(file, '^n')
+}
+
+FormatKeyValueString(linedata[], len1, setting_key[], string[])
+{
+	formatex(linedata, len1, "%s = %s", setting_key, string)
+}
+
+CopyKeyValueArrayInt(file, setting_key[], Array:array_handle)
+{
+	// Copy new data (key + values) into file
+	new linedata[1024]
+	FormatKeyValueArrayInt(linedata, charsmax(linedata), setting_key, array_handle)
+	fputs(file, linedata)
+	fputc(file, '^n')
+}
+
+FormatKeyValueArrayInt(linedata[], len1, setting_key[], Array:array_handle)
+{
+	// Format key
+	new index
+	formatex(linedata, len1, "%s =", setting_key)
+	
+	// First value, append to linedata with no commas
+	format(linedata, len1, "%s %d", linedata, ArrayGetCell(array_handle, index))
+	
+	// Successive values, append to linedata with commas (start on index = 1 to skip first value)
+	for (index = 1; index < ArraySize(array_handle); index++)
+		format(linedata, len1, "%s , %d", linedata, ArrayGetCell(array_handle, index))
+}
+
+CopyKeyValueArrayFloat(file, setting_key[], Array:array_handle)
+{
+	// Copy new data (key + values) into file
+	new linedata[1024]
+	FormatKeyValueArrayFloat(linedata, charsmax(linedata), setting_key, array_handle)
+	fputs(file, linedata)
+	fputc(file, '^n')
+}
+
+FormatKeyValueArrayFloat(linedata[], len1, setting_key[], Array:array_handle)
+{
+	// Format key
+	new index
+	formatex(linedata, len1, "%s =", setting_key)
+	
+	// First value, append to linedata with no commas
+	format(linedata, len1, "%s %.2f", linedata, ArrayGetCell(array_handle, index))
+	
+	// Successive values, append to linedata with commas (start on index = 1 to skip first value)
+	for (index = 1; index < ArraySize(array_handle); index++)
+		format(linedata, len1, "%s , %.2f", linedata, ArrayGetCell(array_handle, index))
+}
+
+CopyKeyValueArrayString(file, setting_key[], Array:array_handle)
+{
+	// Copy new data (key + values) into file
+	new linedata[1024]
+	FormatKeyValueArrayString(linedata, charsmax(linedata), setting_key, array_handle)
+	fputs(file, linedata)
+	fputc(file, '^n')
+}
+
+FormatKeyValueArrayString(linedata[], len1, setting_key[], Array:array_handle)
+{
+	// Format key
+	new index, current_value[128]
+	formatex(linedata, len1, "%s =", setting_key)
+	
+	// First value, append to linedata with no commas
+	ArrayGetString(array_handle, index, current_value, charsmax(current_value))
+	format(linedata, len1, "%s %s", linedata, current_value)
+	
+	// Successive values, append to linedata with commas (start on index = 1 to skip first value)
+	for (index = 1; index < ArraySize(array_handle); index++)
+	{
+		ArrayGetString(array_handle, index, current_value, charsmax(current_value))
+		format(linedata, len1, "%s , %s", linedata, current_value)
+	}
+}
+
+SeekReturnValues(file, keypos_start, value[], len1)
+{
+	// Seek to key and parse it
+	new linedata[1024], key[64]
+	fseek(file, keypos_start, SEEK_SET)
+	fgets(file, linedata, charsmax(linedata))
+	
+	// Replace newlines with a null character
+	replace(linedata, charsmax(linedata), "^n", "")
+	
+	// Get value
+	strtok(linedata, key, charsmax(key), value, len1, '=')
+	trim(value)
+}
+
+ParseValuesArrayString(values[], len1, Array:array_handle)
+{
+	// Parse values
+	new current_value[128]
+	while (values[0] != 0 && strtok(values, current_value, charsmax(current_value), values, len1, ','))
+	{
+		// Trim spaces
+		trim(current_value)
+		trim(values)
+		
+		// Add to array
+		ArrayPushString(array_handle, current_value)
+	}
+}
+
+ParseValuesArrayInt(values[], len1, Array:array_handle)
+{
+	// Parse values
+	new current_value[16]
+	while (values[0] != 0 && strtok(values, current_value, charsmax(current_value), values, len1, ','))
+	{
+		// Trim spaces
+		trim(current_value)
+		trim(values)
+		
+		// Add to array
+		ArrayPushCell(array_handle, str_to_num(current_value))
+	}
+}
+
+ParseValuesArrayFloat(values[], len1, Array:array_handle)
+{
+	// Parse values
+	new current_value[16]
+	while (values[0] != 0 && strtok(values, current_value, charsmax(current_value), values, len1, ','))
+	{
+		// Trim spaces
+		trim(current_value)
+		trim(values)
+		
+		// Add to array
+		ArrayPushCell(array_handle, str_to_float(current_value))
+	}	
 }
