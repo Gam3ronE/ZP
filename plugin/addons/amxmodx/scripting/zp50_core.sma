@@ -327,7 +327,7 @@ public native_core_infect(plugin_id, num_params)
 	
 	new attacker = get_param(2)
 	
-	if (attacker && !is_user_alive(attacker))
+	if (attacker && !is_user_connected(attacker))
 	{
 		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", attacker)
 		return false;
@@ -355,7 +355,7 @@ public native_core_cure(plugin_id, num_params)
 	
 	new attacker = get_param(2)
 	
-	if (attacker && !is_user_alive(attacker))
+	if (attacker && !is_user_connected(attacker))
 	{
 		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", attacker)
 		return false;
