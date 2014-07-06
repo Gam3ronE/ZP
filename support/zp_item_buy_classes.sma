@@ -102,6 +102,7 @@ public zp_extra_item_selected(id, itemid)
 	else if (itemid == g_item_nemesis && nemCount >= 1)
 	{
 		zp_colored_print(0, "^x04[ZP]^x03 %s^x01, Nemesis can only be bought once per map.", name)
+		return ZP_PLUGIN_HANDLED;
 	}
 	
 	
@@ -115,6 +116,7 @@ public zp_extra_item_selected(id, itemid)
 	else if (itemid == g_item_survivor && survCount >= 1)
 	{
 		zp_colored_print(0, "^x04[ZP]^x03 %s^x01, Survivor can only be bought once per map.", name)
+		return ZP_PLUGIN_HANDLED;
 	}
 	
 	
@@ -128,6 +130,7 @@ public zp_extra_item_selected(id, itemid)
 	else if (itemid == g_item_assassin && assCount >= 1)
 	{
 		zp_colored_print(0, "^x04[ZP]^x03 %s^x01, Assassin can only be bought once per map.", name)
+		return ZP_PLUGIN_HANDLED;
 	}
 	
 	
@@ -141,6 +144,7 @@ public zp_extra_item_selected(id, itemid)
 	else if (itemid == g_item_sniper && snipCount >= 1)
 	{
 		zp_colored_print(0, "^x04[ZP]^x03 %s^x01, Sniper can only be bought once per map.", name)
+		return ZP_PLUGIN_HANDLED;
 	}
 	
 	g_buyable = false
