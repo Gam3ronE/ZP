@@ -53,7 +53,8 @@ public plugin_precache()
 	g_item_assassin = zp_register_extra_item(g_item_assassin_name, g_item_assassin_cost, ZP_TEAM_HUMAN)
 	g_item_sniper = zp_register_extra_item(g_item_sniper_name, g_item_sniper_cost, ZP_TEAM_HUMAN)
 	
-	cvar_delay = register_cvar("zp_buy_classes_delay", "25")
+	// Rounds you must wait to buy the item again
+	cvar_delay = register_cvar("zp_buy_classes_delay", "5")
 }
 
 public zp_extra_item_selected(id, itemid)
@@ -62,10 +63,12 @@ public zp_extra_item_selected(id, itemid)
 	if (itemid != g_item_nemesis && itemid != g_item_survivor && itemid != g_item_assassin && itemid != g_item_sniper)
 		return PLUGIN_CONTINUE;
 	
-	// Check if the item is not buyable. If it's not then proceed to if options.
+	// Check if the item is not buyable. If it's not buyable then show messages.
+	// If you always see this message then g_buyable is false. Find out why.
 	if (!g_buyable)
 	{
 		// Check how many rounds we are into the game. If it's equal to the amount we have to wait, next round they can buy.
+		// Examples: If Round count 0 and wait is 0. Round 1 Wait 1. Round 1 Wait 2.
 		if (RoundCount == get_pcvar_num(cvar_delay))
 			zp_colored_print(id, "^x04[ZP]^x01 You have to wait one more round before you can buy this item")
 		else
@@ -74,8 +77,8 @@ public zp_extra_item_selected(id, itemid)
 		return ZP_PLUGIN_HANDLED;
 	}
 	
-	// If the round has started or the round has ended do something.
-	if (zp_has_round_started() == 1 || g_endround)
+	// If the round has started or the round has ended say you can only buy class before round mode starts.
+	if (zp_has_round_started() || g_endround)
 	{
 		zp_colored_print(id, "^x04[ZP]^x01 This item can only be bought before the round mode starts")
 		return ZP_PLUGIN_HANDLED;
@@ -85,31 +88,59 @@ public zp_extra_item_selected(id, itemid)
 	new name[32]
 	get_user_name(id, name, 31)
 	
-	// If it's nemesis and nemCount is greater than 0, make user nemesis, add 1 to nemCount so it can be used once in map.
+	// If it's nemesis and nemCount is less than than 1, make user nemesis, add 1 to nemCount so it can be used once in map.
 	// Then for Survivor, Assassin and Sniper do the same sort of thing.
-	if (itemid == g_item_nemesis && nemCount > 0)
+
+
+	if (itemid == g_item_nemesis && nemCount < 1)
 	{
 		zp_make_user_nemesis(id)
 		zp_colored_print(0, "^x04[ZP]^x03 %s^x01 has bought^x04 Nemesis", name)
 		nemCount++
 	}
-	else if (itemid == g_item_survivor && survCount > 0)
+	// If count is greater than or equal to 1 then say it can only be bought once per map.
+	else if (itemid == g_item_nemesis && nemCount >= 1)
+	{
+		zp_colored_print(0, "^x04[ZP]^x03 %s^x01, Nemesis can only be bought once per map.", name)
+	}
+	
+	
+	else if (itemid == g_item_survivor && survCount < 1)
 	{
 		zp_make_user_survivor(id)
 		zp_colored_print(0, "^x04[ZP]^x03 %s^x01 has bought^x04 Survivor", name)
 		survCount++
 	}
-	else if (itemid == g_item_assassin && assCount > 0)
+	// If count is greater than or equal to 1 then say it can only be bought once per map.
+	else if (itemid == g_item_survivor && survCount >= 1)
+	{
+		zp_colored_print(0, "^x04[ZP]^x03 %s^x01, Survivor can only be bought once per map.", name)
+	}
+	
+	
+	else if (itemid == g_item_assassin && assCount < 1)
 	{
 		zp_make_user_assassin(id)
 		zp_colored_print(0, "^x04[ZP]^x03 %s^x01 has bought^x04 Assassin", name)
 		assCount++
 	}
-	else if (itemid == g_item_sniper && snipCount > 0)
+	// If count is greater than or equal to 1 then say it can only be bought once per map.
+	else if (itemid == g_item_assassin && assCount >= 1)
+	{
+		zp_colored_print(0, "^x04[ZP]^x03 %s^x01, Assassin can only be bought once per map.", name)
+	}
+	
+	
+	else if (itemid == g_item_sniper && snipCount < 1)
 	{
 		zp_make_user_sniper(id)
 		zp_colored_print(0, "^x04[ZP]^x03 %s^x01 has bought^x04 Sniper", name)
 		snipCount++
+	}
+	// If count is greater than or equal to 1 then say it can only be bought once per map.
+	else if (itemid == g_item_sniper && snipCount >= 1)
+	{
+		zp_colored_print(0, "^x04[ZP]^x03 %s^x01, Sniper can only be bought once per map.", name)
 	}
 	
 	g_buyable = false
@@ -117,11 +148,15 @@ public zp_extra_item_selected(id, itemid)
 	return PLUGIN_CONTINUE;
 }
 
+// Set end round variable to false when round starts. Used to block buy class at round end.
 public event_round_start()
 	g_endround = false
 
+// Make classes buyable if the round count is equal to or greater than delay. E.g. round 5 delay 5. Classes buyable.
+// Round 4 Delay 5 classes not buyable.
 public logevent_round_end()
 {
+	// Set end round variable to true when round ends. Used to block buy class at round end.
 	g_endround = true
 	
 	if (g_buyable)
