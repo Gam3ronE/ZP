@@ -197,7 +197,7 @@ public mode_hud(id)
 		// Now the hud appears 
 		ShowSyncHudMsg(id, g_SyncHud, "%s%s^nHumans: %i | Zombies: %i", (g_Mode == 0 ? "" : hud_tag), mode_names[g_Mode], humans, zombies)
 	}
-	else // Must be the Sniper vs Assassins now.
+	else if ( zp_get_current_mode() != MODE_INFECTION || MODE_NEMESIS || MODE_ASSASSIN || MODE_SURVIVOR || MODE_SNIPER || MODE_SWARM || MODE_MULTI || MODE_PLAGUE || MODE_LNJ )// Must be the Sniper vs Assassins now.
 	{
 		// Hud Options 
 		set_hudmessage(rgb_hud_colors[g_Mode][0], rgb_hud_colors[g_Mode][1], rgb_hud_colors[g_Mode][2], HUD_MODE_X, HUD_MODE_Y, 0, 6.0, 12.0) 
