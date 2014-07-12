@@ -23,7 +23,7 @@ Asassin Round
 Assassins: %i | Humans: %i
 
 Sniper Round
-Snipers: %i | Humans: %i
+Snipers: %i | Zombies: %i
 
 Plague Round
 Nemesis': %i | Zombies: %i | Survivors: %i | Humans %i
@@ -180,7 +180,7 @@ public mode_hud(id)
 		// Hud Options 
 		set_hudmessage(rgb_hud_colors[g_Mode][0], rgb_hud_colors[g_Mode][1], rgb_hud_colors[g_Mode][2], HUD_MODE_X, HUD_MODE_Y, 0, 6.0, 12.0) 
 		// Now the hud appears 
-		ShowSyncHudMsg(id, g_SyncHud, "%s%s^nSnipers: %i | Humans: %i", (g_Mode == 0 ? "" : hud_tag), mode_names[g_Mode], snipers, humans)  
+		ShowSyncHudMsg(id, g_SyncHud, "%s%s^nSnipers: %i | Zombies: %i", (g_Mode == 0 ? "" : hud_tag), mode_names[g_Mode], snipers, zombies)  
 	}
 	else if ( zp_is_lnj_round() || zp_is_plague_round() )
     {
