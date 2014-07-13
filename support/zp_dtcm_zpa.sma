@@ -187,7 +187,7 @@ public mode_hud(id)
 		// Hud Options 
 		set_hudmessage(rgb_hud_colors[g_Mode][0], rgb_hud_colors[g_Mode][1], rgb_hud_colors[g_Mode][2], HUD_MODE_X, HUD_MODE_Y, 0, 6.0, 12.0) 
 		// Now the hud appears 
-		ShowSyncHudMsg(id, g_SyncHud, "%s%s^nNemesis': %i | Zombies: %i | Snipers: %i | Humans: %i", (g_Mode == 0 ? "" : hud_tag), mode_names[g_Mode], nemesis, zombies, survivors, humans)  
+		ShowSyncHudMsg(id, g_SyncHud, "%s%s^nNemesis': %i | Zombies: %i | Survivors: %i | Humans: %i", (g_Mode == 0 ? "" : hud_tag), mode_names[g_Mode], nemesis, zombies, survivors, humans)
 	}
 	else if ( zp_get_current_mode() == MODE_INFECTION || MODE_SWARM || MODE_MULTI )
 	{
