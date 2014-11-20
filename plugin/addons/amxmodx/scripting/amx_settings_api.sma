@@ -1,8 +1,8 @@
 /*================================================================================
 	
-	------------------------------------
-	-*- [AMXX] External Settings API -*-
-	------------------------------------
+	---------------------------
+	-*- [AMXX] Settings API -*-
+	---------------------------
 	
 	- API to load/save settings in a Key+Value format that resembles
 	   Windows INI files (http://en.wikipedia.org/wiki/INI_file)
@@ -14,7 +14,7 @@
 
 public plugin_init()
 {
-	register_plugin("[AMXX] External Settings API", "1.0", "MeRcyLeZZ")
+	register_plugin("[AMXX] Settings API", "1.0", "MeRcyLeZZ")
 }
 
 public plugin_natives()
@@ -55,21 +55,20 @@ public native_load_setting_int(plugin_id, num_params)
 	
 	// Try to find key in section
 	new keypos_start, keypos_end
-	if (KeyExists(file, setting_key, keypos_start, keypos_end))
+	if (!KeyExists(file, setting_key, keypos_start, keypos_end))
 	{
-		// Return int by reference
-		new value[16]
-		SeekReturnValues(file, keypos_start, value, charsmax(value))
-		set_param_byref(4, str_to_num(value))
-		
-		// Value succesfully retrieved
 		fclose(file)
-		return true;
+		return false;
 	}
 	
-	// Key not found
+	// Return int by reference
+	new value[16]
+	SeekReturnValues(file, keypos_start, value, charsmax(value))
+	set_param_byref(4, str_to_num(value))
+	
+	// Value succesfully retrieved
 	fclose(file)
-	return false;
+	return true;
 }
 
 public native_load_setting_float(plugin_id, num_params)
@@ -93,22 +92,22 @@ public native_load_setting_float(plugin_id, num_params)
 	
 	// Try to find key in section
 	new keypos_start, keypos_end
-	if (KeyExists(file, setting_key, keypos_start, keypos_end))
+	if (!KeyExists(file, setting_key, keypos_start, keypos_end))
 	{
-		// Return float by reference
-		new value[16]
-		SeekReturnValues(file, keypos_start, value, charsmax(value))
-		set_float_byref(4, str_to_float(value))	
-		
-		// Value succesfully retrieved
 		fclose(file)
-		return true;
+		return false;
 	}
 	
-	// Key not found
+	// Return float by reference
+	new value[16]
+	SeekReturnValues(file, keypos_start, value, charsmax(value))
+	set_float_byref(4, str_to_float(value))	
+	
+	// Value succesfully retrieved
 	fclose(file)
-	return false;
+	return true;
 }
+
 public native_load_setting_string(plugin_id, num_params)
 {
 	// Retrieve and check params
@@ -130,21 +129,20 @@ public native_load_setting_string(plugin_id, num_params)
 	
 	// Try to find key in section
 	new keypos_start, keypos_end
-	if (KeyExists(file, setting_key, keypos_start, keypos_end))
+	if (!KeyExists(file, setting_key, keypos_start, keypos_end))
 	{
-		// Return string by reference
-		new value[128]
-		SeekReturnValues(file, keypos_start, value, charsmax(value))
-		set_string(4, value, get_param(5))
-		
-		// Value succesfully retrieved
 		fclose(file)
-		return true;
+		return false;
 	}
 	
-	// Key not found
+	// Return string by reference
+	new value[128]
+	SeekReturnValues(file, keypos_start, value, charsmax(value))
+	set_string(4, value, get_param(5))
+	
+	// Value succesfully retrieved
 	fclose(file)
-	return false;
+	return true;
 }
 
 public native_save_setting_int(plugin_id, num_params)
@@ -167,8 +165,8 @@ public native_save_setting_int(plugin_id, num_params)
 	{
 		// Section not found, append at the end
 		if (!CustomFileAppend(file, path)) return false;
-		CopySection(file, setting_section)
-		CopyKeyValueInt(file, setting_key, value)
+		WriteSection(file, setting_section)
+		WriteKeyValueInt(file, setting_key, value)
 		fclose(file)
 		return true;
 	}
@@ -181,7 +179,7 @@ public native_save_setting_int(plugin_id, num_params)
 		{
 			// End of file, append at the end
 			if (!CustomFileAppend(file, path)) return false;
-			CopyKeyValueInt(file, setting_key, value)
+			WriteKeyValueInt(file, setting_key, value)
 			fclose(file)
 			return true;
 		}
@@ -200,7 +198,7 @@ public native_save_setting_int(plugin_id, num_params)
 	
 	// Copy new data into temp file
 	CopyDataBeforeKey(file, tempfile, keypos_start, keypos_end, replace_values)
-	CopyKeyValueInt(tempfile, setting_key, value)
+	WriteKeyValueInt(tempfile, setting_key, value)
 	CopyDataAfterKey(file, tempfile)
 	
 	// Replace original with new
@@ -233,8 +231,8 @@ public native_save_setting_float(plugin_id, num_params)
 	{
 		// Section not found, append at the end
 		if (!CustomFileAppend(file, path)) return false;
-		CopySection(file, setting_section)
-		CopyKeyValueFloat(file, setting_key, value)
+		WriteSection(file, setting_section)
+		WriteKeyValueFloat(file, setting_key, value)
 		fclose(file)
 		return true;
 	}
@@ -247,7 +245,7 @@ public native_save_setting_float(plugin_id, num_params)
 		{
 			// End of file, append at the end
 			if (!CustomFileAppend(file, path)) return false;
-			CopyKeyValueFloat(file, setting_key, value)
+			WriteKeyValueFloat(file, setting_key, value)
 			fclose(file)
 			return true;
 		}
@@ -266,7 +264,7 @@ public native_save_setting_float(plugin_id, num_params)
 	
 	// Copy new data into temp file
 	CopyDataBeforeKey(file, tempfile, keypos_start, keypos_end, replace_values)
-	CopyKeyValueFloat(tempfile, setting_key, value)
+	WriteKeyValueFloat(tempfile, setting_key, value)
 	CopyDataAfterKey(file, tempfile)
 	
 	// Replace original with new
@@ -299,8 +297,8 @@ public native_save_setting_string(plugin_id, num_params)
 	{
 		// Section not found, append at the end
 		if (!CustomFileAppend(file, path)) return false;
-		CopySection(file, setting_section)
-		CopyKeyValueString(file, setting_key, string)
+		WriteSection(file, setting_section)
+		WriteKeyValueString(file, setting_key, string)
 		fclose(file)
 		return true;
 	}
@@ -313,7 +311,7 @@ public native_save_setting_string(plugin_id, num_params)
 		{
 			// End of file, append at the end
 			if (!CustomFileAppend(file, path)) return false;
-			CopyKeyValueString(file, setting_key, string)
+			WriteKeyValueString(file, setting_key, string)
 			fclose(file)
 			return true;
 		}
@@ -332,7 +330,7 @@ public native_save_setting_string(plugin_id, num_params)
 	
 	// Copy new data into temp file
 	CopyDataBeforeKey(file, tempfile, keypos_start, keypos_end, replace_values)
-	CopyKeyValueString(tempfile, setting_key, string)
+	WriteKeyValueString(tempfile, setting_key, string)
 	CopyDataAfterKey(file, tempfile)
 	
 	// Replace original with new
@@ -370,21 +368,20 @@ public native_load_setting_int_arr(plugin_id, num_params)
 	
 	// Try to find key in section
 	new keypos_start, keypos_end
-	if (KeyExists(file, setting_key, keypos_start, keypos_end))
+	if (!KeyExists(file, setting_key, keypos_start, keypos_end))
 	{
-		// Return array
-		new values[1024]
-		SeekReturnValues(file, keypos_start, values, charsmax(values))
-		ParseValuesArrayInt(values, charsmax(values), array_handle)
-		
-		// Values succesfully retrieved
 		fclose(file)
-		return true;
+		return false;
 	}
 	
-	// Key not found
+	// Return array
+	new values[1024]
+	SeekReturnValues(file, keypos_start, values, charsmax(values))
+	ParseValuesArrayInt(values, charsmax(values), array_handle)
+	
+	// Values succesfully retrieved
 	fclose(file)
-	return false;
+	return true;
 }
 
 public native_load_setting_float_arr(plugin_id, num_params)
@@ -412,21 +409,20 @@ public native_load_setting_float_arr(plugin_id, num_params)
 	
 	// Try to find key in section
 	new keypos_start, keypos_end
-	if (KeyExists(file, setting_key, keypos_start, keypos_end))
+	if (!KeyExists(file, setting_key, keypos_start, keypos_end))
 	{
-		// Return array
-		new values[1024]
-		SeekReturnValues(file, keypos_start, values, charsmax(values))
-		ParseValuesArrayFloat(values, charsmax(values), array_handle)
-		
-		// Values succesfully retrieved
 		fclose(file)
-		return true;
+		return false;
 	}
 	
-	// Key not found
+	// Return array
+	new values[1024]
+	SeekReturnValues(file, keypos_start, values, charsmax(values))
+	ParseValuesArrayFloat(values, charsmax(values), array_handle)
+	
+	// Values succesfully retrieved
 	fclose(file)
-	return false;
+	return true;
 }
 
 public native_load_setting_string_arr(plugin_id, num_params)
@@ -454,21 +450,20 @@ public native_load_setting_string_arr(plugin_id, num_params)
 	
 	// Try to find key in section
 	new keypos_start, keypos_end
-	if (KeyExists(file, setting_key, keypos_start, keypos_end))
+	if (!KeyExists(file, setting_key, keypos_start, keypos_end))
 	{
-		// Return array
-		new values[1024]
-		SeekReturnValues(file, keypos_start, values, charsmax(values))
-		ParseValuesArrayString(values, charsmax(values), array_handle)
-		
-		// Values succesfully retrieved
 		fclose(file)
-		return true;
+		return false;
 	}
 	
-	// Key not found
+	// Return array
+	new values[1024]
+	SeekReturnValues(file, keypos_start, values, charsmax(values))
+	ParseValuesArrayString(values, charsmax(values), array_handle)
+	
+	// Values succesfully retrieved
 	fclose(file)
-	return false;
+	return true;
 }
 
 public native_save_setting_int_arr(plugin_id, num_params)
@@ -492,8 +487,8 @@ public native_save_setting_int_arr(plugin_id, num_params)
 	{
 		// Section not found, append at the end
 		if (!CustomFileAppend(file, path)) return false;
-		CopySection(file, setting_section)
-		CopyKeyValueArrayInt(file, setting_key, array_handle)
+		WriteSection(file, setting_section)
+		WriteKeyValueArrayInt(file, setting_key, array_handle)
 		fclose(file)
 		return true;
 	}
@@ -506,7 +501,7 @@ public native_save_setting_int_arr(plugin_id, num_params)
 		{
 			// End of file, append at the end
 			if (!CustomFileAppend(file, path)) return false;
-			CopyKeyValueArrayInt(file, setting_key, array_handle)
+			WriteKeyValueArrayInt(file, setting_key, array_handle)
 			fclose(file)
 			return true;
 		}
@@ -525,7 +520,7 @@ public native_save_setting_int_arr(plugin_id, num_params)
 	
 	// Copy new data into temp file
 	CopyDataBeforeKey(file, tempfile, keypos_start, keypos_end, replace_values)
-	CopyKeyValueArrayInt(tempfile, setting_key, array_handle)
+	WriteKeyValueArrayInt(tempfile, setting_key, array_handle)
 	CopyDataAfterKey(file, tempfile)
 	
 	// Replace original with new
@@ -559,8 +554,8 @@ public native_save_setting_float_arr(plugin_id, num_params)
 	{
 		// Section not found, append at the end
 		if (!CustomFileAppend(file, path)) return false;
-		CopySection(file, setting_section)
-		CopyKeyValueArrayFloat(file, setting_key, array_handle)
+		WriteSection(file, setting_section)
+		WriteKeyValueArrayFloat(file, setting_key, array_handle)
 		fclose(file)
 		return true;
 	}
@@ -573,7 +568,7 @@ public native_save_setting_float_arr(plugin_id, num_params)
 		{
 			// End of file, append at the end
 			if (!CustomFileAppend(file, path)) return false;
-			CopyKeyValueArrayFloat(file, setting_key, array_handle)
+			WriteKeyValueArrayFloat(file, setting_key, array_handle)
 			fclose(file)
 			return true;
 		}
@@ -592,7 +587,7 @@ public native_save_setting_float_arr(plugin_id, num_params)
 	
 	// Copy new data into temp file
 	CopyDataBeforeKey(file, tempfile, keypos_start, keypos_end, replace_values)
-	CopyKeyValueArrayFloat(tempfile, setting_key, array_handle)
+	WriteKeyValueArrayFloat(tempfile, setting_key, array_handle)
 	CopyDataAfterKey(file, tempfile)
 	
 	// Replace original with new
@@ -626,8 +621,8 @@ public native_save_setting_string_arr(plugin_id, num_params)
 	{
 		// Section not found, append at the end
 		if (!CustomFileAppend(file, path)) return false;
-		CopySection(file, setting_section)
-		CopyKeyValueArrayString(file, setting_key, array_handle)
+		WriteSection(file, setting_section)
+		WriteKeyValueArrayString(file, setting_key, array_handle)
 		fclose(file)
 		return true;
 	}
@@ -640,7 +635,7 @@ public native_save_setting_string_arr(plugin_id, num_params)
 		{
 			// End of file, append at the end
 			if (!CustomFileAppend(file, path)) return false;
-			CopyKeyValueArrayString(file, setting_key, array_handle)
+			WriteKeyValueArrayString(file, setting_key, array_handle)
 			fclose(file)
 			return true;
 		}
@@ -659,7 +654,7 @@ public native_save_setting_string_arr(plugin_id, num_params)
 	
 	// Copy new data into temp file
 	CopyDataBeforeKey(file, tempfile, keypos_start, keypos_end, replace_values)
-	CopyKeyValueArrayString(tempfile, setting_key, array_handle)
+	WriteKeyValueArrayString(tempfile, setting_key, array_handle)
 	CopyDataAfterKey(file, tempfile)
 	
 	// Replace original with new
@@ -769,7 +764,7 @@ OpenTempFileWrite(temppath[], len1, &tempfile)
 SectionExists(file, setting_section[])
 {
 	// Seek to setting's section
-	new linedata[1024], section[64]	
+	new linedata[96], section[64]	
 	while (!feof(file))
 	{
 		// Read one line at a time
@@ -796,7 +791,7 @@ SectionExists(file, setting_section[])
 KeyExists(file, setting_key[], &keypos_start, &keypos_end)
 {
 	// Seek to setting's key
-	new linedata[1024], key[64]
+	new linedata[96], key[64]
 	while (!feof(file))
 	{
 		// Read one line at a time
@@ -893,7 +888,7 @@ ReplaceFile(&file, path[], tempfile, temppath[])
 	return true;
 }
 
-CopySection(file, setting_section[])
+WriteSection(file, setting_section[])
 {
 	// Copy section header
 	new linedata[96]
@@ -902,7 +897,7 @@ CopySection(file, setting_section[])
 	fputc(file, '^n')
 }
 
-CopyKeyValueInt(file, setting_key[], value)
+WriteKeyValueInt(file, setting_key[], value)
 {
 	// Copy new data (key + values) into file
 	new linedata[96]
@@ -916,7 +911,7 @@ FormatKeyValueInt(linedata[], len1, setting_key[], value)
 	formatex(linedata, len1, "%s = %d", setting_key, value)
 }
 
-CopyKeyValueFloat(file, setting_key[], Float:value)
+WriteKeyValueFloat(file, setting_key[], Float:value)
 {
 	// Copy new data (key + values) into file
 	new linedata[96]
@@ -930,7 +925,7 @@ FormatKeyValueFloat(linedata[], len1, setting_key[], Float:value)
 	formatex(linedata, len1, "%s = %.2f", setting_key, value)
 }
 
-CopyKeyValueString(file, setting_key[], string[])
+WriteKeyValueString(file, setting_key[], string[])
 {
 	// Copy new data (key + values) into file
 	new linedata[256]
@@ -944,7 +939,7 @@ FormatKeyValueString(linedata[], len1, setting_key[], string[])
 	formatex(linedata, len1, "%s = %s", setting_key, string)
 }
 
-CopyKeyValueArrayInt(file, setting_key[], Array:array_handle)
+WriteKeyValueArrayInt(file, setting_key[], Array:array_handle)
 {
 	// Copy new data (key + values) into file
 	new linedata[1024]
@@ -967,7 +962,7 @@ FormatKeyValueArrayInt(linedata[], len1, setting_key[], Array:array_handle)
 		format(linedata, len1, "%s , %d", linedata, ArrayGetCell(array_handle, index))
 }
 
-CopyKeyValueArrayFloat(file, setting_key[], Array:array_handle)
+WriteKeyValueArrayFloat(file, setting_key[], Array:array_handle)
 {
 	// Copy new data (key + values) into file
 	new linedata[1024]
@@ -990,7 +985,7 @@ FormatKeyValueArrayFloat(linedata[], len1, setting_key[], Array:array_handle)
 		format(linedata, len1, "%s , %.2f", linedata, ArrayGetCell(array_handle, index))
 }
 
-CopyKeyValueArrayString(file, setting_key[], Array:array_handle)
+WriteKeyValueArrayString(file, setting_key[], Array:array_handle)
 {
 	// Copy new data (key + values) into file
 	new linedata[1024]
@@ -1017,7 +1012,7 @@ FormatKeyValueArrayString(linedata[], len1, setting_key[], Array:array_handle)
 	}
 }
 
-SeekReturnValues(file, keypos_start, value[], len1)
+SeekReturnValues(file, keypos_start, values[], len1)
 {
 	// Seek to key and parse it
 	new linedata[1024], key[64]
@@ -1027,9 +1022,9 @@ SeekReturnValues(file, keypos_start, value[], len1)
 	// Replace newlines with a null character
 	replace(linedata, charsmax(linedata), "^n", "")
 	
-	// Get value
-	strtok(linedata, key, charsmax(key), value, len1, '=')
-	trim(value)
+	// Get values
+	strtok(linedata, key, charsmax(key), values, len1, '=')
+	trim(values)
 }
 
 ParseValuesArrayString(values[], len1, Array:array_handle)

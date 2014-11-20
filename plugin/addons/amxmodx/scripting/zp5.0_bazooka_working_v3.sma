@@ -1,4 +1,3 @@
-/* Try it please */ 
 #include <amxmodx>
 #include <amxmisc>
 #include <fakemeta>
